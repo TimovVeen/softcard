@@ -2,9 +2,9 @@ use std::{num::NonZeroU32, rc::Rc};
 
 use softbuffer::{Context, Surface};
 use vello_cpu::{
-    RenderContext, RenderMode,
+    PaintType, RenderContext, RenderMode,
     color::palette::css,
-    kurbo::{Affine, BezPath, Circle, Line, Point, RoundedRect, Shape, Stroke, Vec2},
+    kurbo::{Affine, BezPath, Circle, Line, Point, Rect, RoundedRect, Shape, Stroke, Vec2},
 };
 use winit::{
     event::{KeyEvent, WindowEvent},
@@ -16,6 +16,26 @@ use winit::{
 mod app;
 
 const TOLERANCE: f64 = 0.1;
+
+enum SetShape {
+    Diamond,
+    Squiggle,
+    Oval,
+}
+
+enum SetFilling {
+    Solid,
+    Striped,
+    Open,
+}
+
+fn draw_shape(
+    ctx: &RenderContext,
+    shape: SetShape,
+    filling: SetFilling,
+    color: impl Into<PaintType>,
+) {
+}
 
 fn main() {
     let event_loop = EventLoop::new().unwrap();
@@ -115,8 +135,11 @@ fn main() {
                     renderctx.set_paint(css::PURPLE);
                     renderctx.fill_path(&circle);
 
-                    let setrect = RoundedRect::new(0., 0., 200., 100., 50.).to_path(TOLERANCE);
                     renderctx.set_transform(Affine::translate(Vec2::new(500., 500.)));
+                    renderctx.set_paint(css::WHITE);
+                    renderctx.fill_rect(&Rect::new(0., 0., 200., 100.));
+
+                    let setrect = RoundedRect::new(0., 0., 200., 100., 50.).to_path(TOLERANCE);
                     renderctx.set_paint(css::RED);
                     renderctx.set_stroke(Stroke::new(7.));
                     renderctx.stroke_path(&setrect);
@@ -131,6 +154,10 @@ fn main() {
                     }
                     renderctx.pop_clip_path();
 
+                    renderctx.set_transform(Affine::translate(Vec2::new(500., 650.)));
+                    renderctx.set_paint(css::WHITE);
+                    renderctx.fill_rect(&Rect::new(0., 0., 200., 100.));
+
                     let (dia_width, dia_height) = (200., 100.);
                     let mut diamond = BezPath::with_capacity(5);
                     diamond.move_to((0., dia_height / 2.));
@@ -139,10 +166,26 @@ fn main() {
                     diamond.line_to((dia_width / 2., dia_height));
                     diamond.close_path();
 
-                    renderctx.set_transform(Affine::translate(Vec2::new(500., 700.)));
                     renderctx.set_paint(css::GREEN);
                     renderctx.set_stroke(Stroke::new(7.));
                     renderctx.stroke_path(&diamond);
+
+                    renderctx.set_transform(Affine::translate(Vec2::new(500., 800.)));
+                    renderctx.set_paint(css::WHITE);
+                    renderctx.fill_rect(&Rect::new(0., 0., 200., 100.));
+
+                    let mut squiggle = BezPath::with_capacity(7);
+                    squiggle.move_to((198.0, 11.0));
+                    squiggle.curve_to((214.8, 54.8), (169.4, 102.6), (116.0, 89.0));
+                    squiggle.curve_to((94.6, 83.6), (74.4, 65.0), (44.0, 87.0));
+                    squiggle.curve_to((9.2, 112.2), (0.8, 97.6), (0.0, 61.0));
+                    squiggle.curve_to((-0.8, 25.0), (28.2, 0.4), (62.0, 5.0));
+                    squiggle.curve_to((108.4, 11.4), (113.8, 44.0), (168.0, 9.0));
+                    squiggle.curve_to((180.6, 1.0), (191.8, -5.2), (198.0, 11.0));
+                    renderctx.set_paint(css::REBECCA_PURPLE);
+                    renderctx.set_stroke(Stroke::new(7.));
+                    renderctx.stroke_path(&squiggle);
+                    renderctx.fill_path(&squiggle);
 
                     renderctx.render_to_buffer(
                         bufslice,
