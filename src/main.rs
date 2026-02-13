@@ -4,7 +4,7 @@ use softbuffer::{Context, Surface};
 use vello_cpu::{
     RenderContext, RenderMode,
     color::palette::css,
-    kurbo::{Affine, Circle, Point, RoundedRect, Shape, Vec2},
+    kurbo::{Affine, BezPath, Circle, Line, Point, RoundedRect, Shape, Stroke, Vec2},
 };
 use winit::{
     event::{KeyEvent, WindowEvent},
@@ -14,6 +14,8 @@ use winit::{
 };
 
 mod app;
+
+const TOLERANCE: f64 = 0.1;
 
 fn main() {
     let event_loop = EventLoop::new().unwrap();
@@ -27,8 +29,8 @@ fn main() {
     let offset = 2. * radius + padding;
     let margin_offset = margin + radius;
 
-    let rect = RoundedRect::new(0., 0., 400., 600., bezel).to_path(0.1);
-    let circle = Circle::new(Point::ZERO, radius).to_path(0.1);
+    let rect = RoundedRect::new(0., 0., 400., 600., bezel).to_path(TOLERANCE);
+    let circle = Circle::new(Point::ZERO, radius).to_path(TOLERANCE);
 
     let mut app = app::WinitAppBuilder::with_init(
         |elwt| {
@@ -112,6 +114,35 @@ fn main() {
                     )));
                     renderctx.set_paint(css::PURPLE);
                     renderctx.fill_path(&circle);
+
+                    let setrect = RoundedRect::new(0., 0., 200., 100., 50.).to_path(TOLERANCE);
+                    renderctx.set_transform(Affine::translate(Vec2::new(500., 500.)));
+                    renderctx.set_paint(css::RED);
+                    renderctx.set_stroke(Stroke::new(7.));
+                    renderctx.stroke_path(&setrect);
+
+                    renderctx.set_stroke(Stroke::new(3.));
+                    renderctx.push_clip_path(&setrect);
+                    for i in 0..20 {
+                        renderctx.stroke_path(
+                            &Line::new((10. * i as f32, 0.), (10. * i as f32, 100.))
+                                .to_path(TOLERANCE),
+                        );
+                    }
+                    renderctx.pop_clip_path();
+
+                    let (dia_width, dia_height) = (200., 100.);
+                    let mut diamond = BezPath::with_capacity(5);
+                    diamond.move_to((0., dia_height / 2.));
+                    diamond.line_to((dia_width / 2., 0.));
+                    diamond.line_to((dia_width, dia_height / 2.));
+                    diamond.line_to((dia_width / 2., dia_height));
+                    diamond.close_path();
+
+                    renderctx.set_transform(Affine::translate(Vec2::new(500., 700.)));
+                    renderctx.set_paint(css::GREEN);
+                    renderctx.set_stroke(Stroke::new(7.));
+                    renderctx.stroke_path(&diamond);
 
                     renderctx.render_to_buffer(
                         bufslice,
