@@ -4,7 +4,7 @@ use softbuffer::{Context, Surface};
 use vello_cpu::{
     PaintType, RenderContext, RenderMode,
     color::palette::css,
-    kurbo::{Affine, BezPath, Circle, Line, Point, Rect, RoundedRect, Shape, Stroke, Vec2},
+    kurbo::{Affine, BezPath, Circle, Line, Point, RoundedRect, Shape, Stroke, Vec2},
 };
 use winit::{
     event::{KeyEvent, WindowEvent},
@@ -181,10 +181,12 @@ fn main() {
                     renderctx.set_paint(css::PURPLE);
                     renderctx.fill_path(&circle);
 
-                    renderctx.set_transform(Affine::translate(Vec2::new(500., 500.)));
+                    renderctx
+                        .set_transform(Affine::scale(0.8).with_translation(Vec2::new(440., 460.)));
                     renderctx.set_paint(css::WHITE);
-                    renderctx.fill_rect(&Rect::new(0., 0., 200., 100.));
+                    renderctx.fill_path(&rect);
 
+                    renderctx.set_transform(Affine::translate(Vec2::new(500., 500.)));
                     draw_shape(
                         &mut renderctx,
                         SetShape::Oval,
@@ -193,9 +195,6 @@ fn main() {
                     );
 
                     renderctx.set_transform(Affine::translate(Vec2::new(500., 650.)));
-                    renderctx.set_paint(css::WHITE);
-                    renderctx.fill_rect(&Rect::new(0., 0., 200., 100.));
-
                     draw_shape(
                         &mut renderctx,
                         SetShape::Diamond,
@@ -204,9 +203,6 @@ fn main() {
                     );
 
                     renderctx.set_transform(Affine::translate(Vec2::new(500., 800.)));
-                    renderctx.set_paint(css::WHITE);
-                    renderctx.fill_rect(&Rect::new(0., 0., 200., 100.));
-
                     draw_shape(
                         &mut renderctx,
                         SetShape::Squiggle,
