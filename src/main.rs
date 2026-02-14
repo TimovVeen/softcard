@@ -26,12 +26,6 @@ const PADDING: f64 = 60.;
 const OFFSET: f64 = 2. * RADIUS + PADDING;
 const MARGIN_OFFSET: f64 = MARGIN + RADIUS;
 
-enum SetShape {
-    Diamond,
-    Squiggle,
-    Oval,
-}
-
 enum SetFilling {
     Solid,
     Striped,
@@ -50,12 +44,36 @@ struct SetApp {
     render_state: RenderState,
     renderer: RenderContext,
     circle: BezPath,
-    rect: BezPath,
+    card: BezPath,
+    diamond: BezPath,
+    squiggle: BezPath,
+    oval: BezPath,
     scale: f64,
 }
 
 impl SetApp {
     fn new() -> Self {
+        let diamond = {
+            let mut diamond = BezPath::with_capacity(5);
+            diamond.move_to((0., 50.));
+            diamond.line_to((100., 0.));
+            diamond.line_to((200., 50.));
+            diamond.line_to((100., 100.));
+            diamond.close_path();
+            diamond
+        };
+        let squiggle = {
+            let mut squiggle = BezPath::with_capacity(7);
+            squiggle.move_to((198.0, 11.0));
+            squiggle.curve_to((214.8, 54.8), (169.4, 102.6), (116.0, 89.0));
+            squiggle.curve_to((94.6, 83.6), (74.4, 65.0), (44.0, 87.0));
+            squiggle.curve_to((9.2, 112.2), (0.8, 97.6), (0.0, 61.0));
+            squiggle.curve_to((-0.8, 25.0), (28.2, 0.4), (62.0, 5.0));
+            squiggle.curve_to((108.4, 11.4), (113.8, 44.0), (168.0, 9.0));
+            squiggle.curve_to((180.6, 1.0), (191.8, -5.2), (198.0, 11.0));
+            squiggle
+        };
+        let oval = RoundedRect::new(0., 0., 200., 100., 50.).to_path(TOLERANCE);
         Self {
             render_state: RenderState::Suspended,
             renderer: RenderContext::new_with(
@@ -67,7 +85,10 @@ impl SetApp {
                 },
             ),
             circle: Circle::new(Point::ZERO, RADIUS).to_path(TOLERANCE),
-            rect: RoundedRect::new(0., 0., 400., 600., BEZEL).to_path(TOLERANCE),
+            card: RoundedRect::new(0., 0., 400., 600., BEZEL).to_path(TOLERANCE),
+            diamond,
+            squiggle,
+            oval,
             scale: 1.,
         }
     }
@@ -149,6 +170,7 @@ impl ApplicationHandler for SetApp {
             }
             WindowEvent::RedrawRequested => {
                 self.renderer.reset();
+                self.renderer.set_transform(Affine::scale(self.scale));
 
                 let size = window.inner_size();
 
@@ -161,76 +183,84 @@ impl ApplicationHandler for SetApp {
                 };
 
                 self.renderer.set_paint(css::WHITE);
-                self.renderer.fill_path(&self.rect);
+                self.renderer.fill_path(&self.card);
 
-                self.renderer
-                    .set_transform(Affine::translate(Vec2::new(MARGIN_OFFSET, MARGIN_OFFSET)));
+                self.renderer.set_transform(
+                    Affine::translate(Vec2::new(MARGIN_OFFSET, MARGIN_OFFSET))
+                        .then_scale(self.scale),
+                );
                 self.renderer.set_paint(css::RED);
                 self.renderer.fill_path(&self.circle);
 
-                self.renderer.set_transform(Affine::translate(Vec2::new(
-                    MARGIN_OFFSET,
-                    MARGIN_OFFSET + OFFSET,
-                )));
+                self.renderer.set_transform(
+                    Affine::translate(Vec2::new(MARGIN_OFFSET, MARGIN_OFFSET + OFFSET))
+                        .then_scale(self.scale),
+                );
                 self.renderer.set_paint(css::YELLOW);
                 self.renderer.fill_path(&self.circle);
 
-                self.renderer.set_transform(Affine::translate(Vec2::new(
-                    MARGIN_OFFSET,
-                    MARGIN_OFFSET + OFFSET * 2.,
-                )));
+                self.renderer.set_transform(
+                    Affine::translate(Vec2::new(MARGIN_OFFSET, MARGIN_OFFSET + OFFSET * 2.))
+                        .then_scale(self.scale),
+                );
                 self.renderer.set_paint(css::BLUE);
                 self.renderer.fill_path(&self.circle);
 
-                self.renderer.set_transform(Affine::translate(Vec2::new(
-                    MARGIN_OFFSET + OFFSET,
-                    MARGIN_OFFSET,
-                )));
+                self.renderer.set_transform(
+                    Affine::translate(Vec2::new(MARGIN_OFFSET + OFFSET, MARGIN_OFFSET))
+                        .then_scale(self.scale),
+                );
                 self.renderer.set_paint(css::ORANGE);
                 self.renderer.fill_path(&self.circle);
 
-                self.renderer.set_transform(Affine::translate(Vec2::new(
-                    MARGIN_OFFSET + OFFSET,
-                    MARGIN_OFFSET + OFFSET,
-                )));
+                self.renderer.set_transform(
+                    Affine::translate(Vec2::new(MARGIN_OFFSET + OFFSET, MARGIN_OFFSET + OFFSET))
+                        .then_scale(self.scale),
+                );
                 self.renderer.set_paint(css::GREEN);
                 self.renderer.fill_path(&self.circle);
 
-                self.renderer.set_transform(Affine::translate(Vec2::new(
-                    MARGIN_OFFSET + OFFSET,
-                    MARGIN_OFFSET + OFFSET * 2.,
-                )));
+                self.renderer.set_transform(
+                    Affine::translate(Vec2::new(
+                        MARGIN_OFFSET + OFFSET,
+                        MARGIN_OFFSET + OFFSET * 2.,
+                    ))
+                    .then_scale(self.scale),
+                );
                 self.renderer.set_paint(css::PURPLE);
                 self.renderer.fill_path(&self.circle);
 
-                self.renderer
-                    .set_transform(Affine::scale(0.8).with_translation(Vec2::new(440., 460.)));
+                self.renderer.set_transform(
+                    Affine::scale(0.8)
+                        .with_translation(Vec2::new(440., 460.))
+                        .then_scale(self.scale),
+                );
                 self.renderer.set_paint(css::WHITE);
-                self.renderer.fill_path(&self.rect);
+                self.renderer.fill_path(&self.card);
 
                 self.renderer
-                    .set_transform(Affine::translate(Vec2::new(500., 500.)));
+                    .set_transform(Affine::translate(Vec2::new(500., 500.)).then_scale(self.scale));
                 draw_shape(
                     &mut self.renderer,
-                    SetShape::Oval,
+                    &self.oval,
                     SetFilling::Striped,
                     css::RED,
                 );
 
                 self.renderer
-                    .set_transform(Affine::translate(Vec2::new(500., 650.)));
+                    .set_transform(Affine::translate(Vec2::new(500., 650.)).then_scale(self.scale));
                 draw_shape(
                     &mut self.renderer,
-                    SetShape::Diamond,
+                    &self.diamond,
                     SetFilling::Open,
                     css::GREEN,
                 );
 
                 self.renderer
-                    .set_transform(Affine::translate(Vec2::new(500., 800.)));
+                    .set_transform(Affine::translate(Vec2::new(500., 800.)).then_scale(self.scale));
                 draw_shape(
                     &mut self.renderer,
-                    SetShape::Squiggle,
+                    &self.squiggle,
                     SetFilling::Solid,
                     css::REBECCA_PURPLE,
                 );
@@ -262,45 +292,19 @@ impl ApplicationHandler for SetApp {
 
 fn draw_shape(
     ctx: &mut RenderContext,
-    shape: SetShape,
+    path: &BezPath,
     filling: SetFilling,
     color: impl Into<PaintType>,
 ) {
     ctx.set_paint(color);
     ctx.set_stroke(Stroke::new(STROKE_WIDTH));
-
-    let path = match shape {
-        SetShape::Diamond => {
-            let (dia_width, dia_height) = (200., 100.);
-            let mut diamond = BezPath::with_capacity(5);
-            diamond.move_to((0., dia_height / 2.));
-            diamond.line_to((dia_width / 2., 0.));
-            diamond.line_to((dia_width, dia_height / 2.));
-            diamond.line_to((dia_width / 2., dia_height));
-            diamond.close_path();
-            diamond
-        }
-        SetShape::Squiggle => {
-            let mut squiggle = BezPath::with_capacity(7);
-            squiggle.move_to((198.0, 11.0));
-            squiggle.curve_to((214.8, 54.8), (169.4, 102.6), (116.0, 89.0));
-            squiggle.curve_to((94.6, 83.6), (74.4, 65.0), (44.0, 87.0));
-            squiggle.curve_to((9.2, 112.2), (0.8, 97.6), (0.0, 61.0));
-            squiggle.curve_to((-0.8, 25.0), (28.2, 0.4), (62.0, 5.0));
-            squiggle.curve_to((108.4, 11.4), (113.8, 44.0), (168.0, 9.0));
-            squiggle.curve_to((180.6, 1.0), (191.8, -5.2), (198.0, 11.0));
-            squiggle
-        }
-        SetShape::Oval => RoundedRect::new(0., 0., 200., 100., 50.).to_path(TOLERANCE),
-    };
-
-    ctx.stroke_path(&path);
+    ctx.stroke_path(path);
 
     match filling {
-        SetFilling::Solid => ctx.fill_path(&path),
+        SetFilling::Solid => ctx.fill_path(path),
         SetFilling::Striped => {
             ctx.set_stroke(Stroke::new(STRIPE_WIDTH));
-            ctx.push_clip_path(&path);
+            ctx.push_clip_path(path);
             for i in 0..20 {
                 ctx.stroke_path(
                     &Line::new((10. * i as f32, 0.), (10. * i as f32, 100.)).to_path(TOLERANCE),
