@@ -32,16 +32,13 @@ enum SetFilling {
     Open,
 }
 
-enum RenderState {
-    Active {
-        window: Rc<Window>,
-        surface: Surface<Rc<Window>, Rc<Window>>,
-    },
-    Suspended,
+struct RenderState {
+    window: Rc<Window>,
+    surface: Surface<Rc<Window>, Rc<Window>>,
 }
 
 struct SetApp {
-    render_state: RenderState,
+    render_state: Option<RenderState>,
     renderer: RenderContext,
     circle: BezPath,
     card: BezPath,
@@ -75,7 +72,7 @@ impl SetApp {
         };
         let oval = RoundedRect::new(0., 0., 200., 100., 50.).to_path(TOLERANCE);
         Self {
-            render_state: RenderState::Suspended,
+            render_state: None,
             renderer: RenderContext::new_with(
                 1980,
                 1080,
@@ -96,11 +93,11 @@ impl SetApp {
 
 impl ApplicationHandler for SetApp {
     fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
-        self.render_state = RenderState::Suspended;
+        self.render_state = None;
     }
 
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        if matches!(self.render_state, RenderState::Active { .. }) {
+        if self.render_state.is_some() {
             return;
         }
 
@@ -112,7 +109,7 @@ impl ApplicationHandler for SetApp {
         let context = Context::new(window.clone()).unwrap();
         let surface = Surface::new(&context, window.clone()).unwrap();
 
-        self.render_state = RenderState::Active { window, surface };
+        self.render_state = Some(RenderState { window, surface });
     }
 
     fn window_event(
@@ -121,7 +118,7 @@ impl ApplicationHandler for SetApp {
         window_id: WindowId,
         event: WindowEvent,
     ) {
-        let RenderState::Active { window, surface } = &mut self.render_state else {
+        let Some(RenderState { window, surface }) = &mut self.render_state else {
             return;
         };
         if window_id != window.id() {
