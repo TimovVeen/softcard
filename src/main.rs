@@ -26,6 +26,15 @@ const PADDING: f64 = 60.;
 const OFFSET: f64 = 2. * RADIUS + PADDING;
 const MARGIN_OFFSET: f64 = MARGIN + RADIUS;
 
+const COLORS: [vello_cpu::color::AlphaColor<vello_cpu::color::Srgb>; 6] = [
+    css::RED,
+    css::ORANGE,
+    css::YELLOW,
+    css::GREEN,
+    css::BLUE,
+    css::PURPLE,
+];
+
 enum SetFilling {
     Solid,
     Striped,
@@ -141,7 +150,6 @@ impl ApplicationHandler for SetApp {
                 inner_size_writer: _,
             } => {
                 self.scale = scale_factor;
-                println!("{scale_factor}");
             }
             WindowEvent::Resized(size) => {
                 let width = size.width.max(1);
@@ -179,53 +187,7 @@ impl ApplicationHandler for SetApp {
                     unsafe { std::slice::from_raw_parts_mut(ptr, len) }
                 };
 
-                self.renderer.set_paint(css::WHITE);
-                self.renderer.fill_path(&self.card);
-
-                self.renderer.set_transform(
-                    Affine::translate(Vec2::new(MARGIN_OFFSET, MARGIN_OFFSET))
-                        .then_scale(self.scale),
-                );
-                self.renderer.set_paint(css::RED);
-                self.renderer.fill_path(&self.circle);
-
-                self.renderer.set_transform(
-                    Affine::translate(Vec2::new(MARGIN_OFFSET, MARGIN_OFFSET + OFFSET))
-                        .then_scale(self.scale),
-                );
-                self.renderer.set_paint(css::YELLOW);
-                self.renderer.fill_path(&self.circle);
-
-                self.renderer.set_transform(
-                    Affine::translate(Vec2::new(MARGIN_OFFSET, MARGIN_OFFSET + OFFSET * 2.))
-                        .then_scale(self.scale),
-                );
-                self.renderer.set_paint(css::BLUE);
-                self.renderer.fill_path(&self.circle);
-
-                self.renderer.set_transform(
-                    Affine::translate(Vec2::new(MARGIN_OFFSET + OFFSET, MARGIN_OFFSET))
-                        .then_scale(self.scale),
-                );
-                self.renderer.set_paint(css::ORANGE);
-                self.renderer.fill_path(&self.circle);
-
-                self.renderer.set_transform(
-                    Affine::translate(Vec2::new(MARGIN_OFFSET + OFFSET, MARGIN_OFFSET + OFFSET))
-                        .then_scale(self.scale),
-                );
-                self.renderer.set_paint(css::GREEN);
-                self.renderer.fill_path(&self.circle);
-
-                self.renderer.set_transform(
-                    Affine::translate(Vec2::new(
-                        MARGIN_OFFSET + OFFSET,
-                        MARGIN_OFFSET + OFFSET * 2.,
-                    ))
-                    .then_scale(self.scale),
-                );
-                self.renderer.set_paint(css::PURPLE);
-                self.renderer.fill_path(&self.circle);
+                draw_projcard(&mut self.renderer, &self.card, &self.circle, 0b111111);
 
                 self.renderer.set_transform(
                     Affine::scale(0.8)
@@ -262,6 +224,10 @@ impl ApplicationHandler for SetApp {
                     css::REBECCA_PURPLE,
                 );
 
+                self.renderer
+                    .set_transform(Affine::translate(Vec2::new(800., 300.)).then_scale(self.scale));
+                draw_projcard(&mut self.renderer, &self.card, &self.circle, 0b110101);
+
                 self.renderer.flush();
                 self.renderer.render_to_buffer(
                     bufslice,
@@ -285,6 +251,31 @@ impl ApplicationHandler for SetApp {
             _ => {}
         }
     }
+}
+
+fn draw_projcard(ctx: &mut RenderContext, card: &BezPath, dot: &BezPath, mask: u8) {
+    let trans = *ctx.transform();
+    ctx.set_paint(css::WHITE);
+    ctx.fill_path(card);
+
+    for i in 0..3 {
+        for j in 0..2 {
+            let idx = i * 2 + j;
+            if (1 << idx) & mask != 0 {
+                ctx.set_transform(
+                    trans
+                        * Affine::translate(Vec2::new(
+                            MARGIN_OFFSET + OFFSET * j as f64,
+                            MARGIN_OFFSET + OFFSET * i as f64,
+                        )),
+                );
+                ctx.set_paint(COLORS[idx]);
+                ctx.fill_path(dot);
+            }
+        }
+    }
+
+    ctx.set_transform(trans);
 }
 
 fn draw_shape(
