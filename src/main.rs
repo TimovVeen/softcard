@@ -10,7 +10,7 @@ use vello_cpu::{
 };
 use winit::{
     application::ApplicationHandler,
-    event::{KeyEvent, WindowEvent},
+    event::{ElementState, KeyEvent, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoop},
     keyboard::{Key, NamedKey},
     window::{Window, WindowId},
@@ -68,6 +68,9 @@ struct SetApp {
     oval: BezPath,
     scale: f64,
     cards: [u8; 7],
+    all_cards: [u8; 63],
+    selection: u8,
+    card_head: usize,
 }
 
 impl SetApp {
@@ -112,6 +115,9 @@ impl SetApp {
             oval,
             scale: 1.,
             cards: *all_cards[..7].as_array().unwrap(),
+            all_cards,
+            selection: 0,
+            card_head: 7,
         }
     }
 }
@@ -161,6 +167,47 @@ impl ApplicationHandler for SetApp {
             } => {
                 event_loop.exit();
             }
+            WindowEvent::KeyboardInput {
+                event:
+                    KeyEvent {
+                        logical_key: Key::Character(str),
+                        state: ElementState::Pressed,
+                        repeat: false,
+                        ..
+                    },
+                ..
+            } => {
+                if let Ok(num) = str.parse::<u8>()
+                    && num > 0
+                    && num <= 7
+                {
+                    self.selection ^= 1 << (num - 1);
+                    let mut res = 0;
+                    let mut sels = self.selection;
+                    while sels != 0 {
+                        res ^= self.cards[sels.trailing_zeros() as usize];
+                        sels &= sels - 1;
+                    }
+                    if res == 0 && self.selection != 0 {
+                        println!("you got a set");
+                        let mut sels = self.selection;
+                        while sels != 0 {
+                            self.cards[sels.trailing_zeros() as usize] =
+                                self.all_cards[self.card_head];
+                            self.card_head += 1;
+                            if self.card_head >= 63 {
+                                println!("you win");
+                                event_loop.exit();
+                                return;
+                            }
+
+                            sels &= sels - 1;
+                        }
+                        self.selection = 0;
+                    }
+                    window.request_redraw();
+                };
+            }
             WindowEvent::ScaleFactorChanged {
                 scale_factor,
                 inner_size_writer: _,
@@ -209,7 +256,8 @@ impl ApplicationHandler for SetApp {
                         Affine::translate(Vec2::new((400. + SPACING) * i as f64, 0.))
                             .then_scale(cardscale),
                     );
-                    draw_projcard(&mut self.renderer, &self.card, &self.circle, card);
+                    let selected = self.selection & (1 << i) != 0;
+                    draw_projcard(&mut self.renderer, &self.card, &self.circle, card, selected);
                 }
 
                 self.renderer.flush();
@@ -237,9 +285,9 @@ impl ApplicationHandler for SetApp {
     }
 }
 
-fn draw_projcard(ctx: &mut RenderContext, card: &BezPath, dot: &BezPath, mask: u8) {
+fn draw_projcard(ctx: &mut RenderContext, card: &BezPath, dot: &BezPath, mask: u8, selected: bool) {
     let trans = *ctx.transform();
-    ctx.set_paint(css::WHITE);
+    ctx.set_paint(if selected { css::GRAY } else { css::WHITE });
     ctx.fill_path(card);
 
     for i in 0..3 {
