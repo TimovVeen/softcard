@@ -22,6 +22,8 @@ const STRIPE_WIDTH: f64 = 3.;
 
 const BEZEL: f64 = 30.;
 const RADIUS: f64 = 60.;
+const CARD_WIDTH: f64 = 400.;
+const CARD_HEIGHT: f64 = 600.;
 
 const SPACING: f64 = 20.;
 const MARGIN: f64 = 50.;
@@ -109,7 +111,7 @@ impl SetApp {
                 },
             ),
             circle: Circle::new(Point::ZERO, RADIUS).to_path(TOLERANCE),
-            card: RoundedRect::new(0., 0., 400., 600., BEZEL).to_path(TOLERANCE),
+            card: RoundedRect::new(0., 0., CARD_WIDTH, CARD_HEIGHT, BEZEL).to_path(TOLERANCE),
             diamond,
             squiggle,
             oval,
@@ -241,7 +243,8 @@ impl ApplicationHandler for SetApp {
                 self.renderer.set_transform(Affine::scale(self.scale));
 
                 let size = window.inner_size();
-                let cardscale = size.width as f64 / ((400. + SPACING) * 7. - SPACING);
+                let x_cardscale = size.width as f64 / ((CARD_WIDTH + SPACING) * 4. - SPACING);
+                let y_cardscale = size.height as f64 / ((CARD_HEIGHT + SPACING) * 2. - SPACING);
 
                 let mut buffer = surface.buffer_mut().unwrap();
 
@@ -252,9 +255,13 @@ impl ApplicationHandler for SetApp {
                 };
 
                 for (i, &card) in self.cards.iter().enumerate() {
+                    // use bithacks instead?
                     self.renderer.set_transform(
-                        Affine::translate(Vec2::new((400. + SPACING) * i as f64, 0.))
-                            .then_scale(cardscale),
+                        Affine::translate(Vec2::new(
+                            (CARD_WIDTH + SPACING) * (i % 4) as f64,
+                            (CARD_HEIGHT + SPACING) * (i / 4) as f64,
+                        ))
+                        .then_scale(f64::min(x_cardscale, y_cardscale)),
                     );
                     let selected = self.selection & (1 << i) != 0;
                     draw_projcard(&mut self.renderer, &self.card, &self.circle, card, selected);
