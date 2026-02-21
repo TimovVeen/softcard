@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::{num::NonZeroU32, rc::Rc};
 
 use softbuffer::{Context, Surface};
@@ -21,11 +23,21 @@ const STRIPE_WIDTH: f64 = 3.;
 const BEZEL: f64 = 30.;
 const RADIUS: f64 = 60.;
 
+const SPACING: f64 = 20.;
 const MARGIN: f64 = 50.;
 const PADDING: f64 = 60.;
 const OFFSET: f64 = 2. * RADIUS + PADDING;
 const MARGIN_OFFSET: f64 = MARGIN + RADIUS;
 
+const CARDS: [u8; 63] = {
+    let mut res = [0_u8; _];
+    let mut i = 0;
+    while i < res.len() {
+        res[i] = i as u8 + 1;
+        i += 1;
+    }
+    res
+};
 const COLORS: [vello_cpu::color::AlphaColor<vello_cpu::color::Srgb>; 6] = [
     css::RED,
     css::ORANGE,
@@ -55,10 +67,13 @@ struct SetApp {
     squiggle: BezPath,
     oval: BezPath,
     scale: f64,
+    cards: [u8; 7],
 }
 
 impl SetApp {
     fn new() -> Self {
+        let mut all_cards = CARDS;
+        fastrand::shuffle(&mut all_cards);
         let diamond = {
             let mut diamond = BezPath::with_capacity(5);
             diamond.move_to((0., 50.));
@@ -96,6 +111,7 @@ impl SetApp {
             squiggle,
             oval,
             scale: 1.,
+            cards: *all_cards[..7].as_array().unwrap(),
         }
     }
 }
@@ -178,6 +194,7 @@ impl ApplicationHandler for SetApp {
                 self.renderer.set_transform(Affine::scale(self.scale));
 
                 let size = window.inner_size();
+                let cardscale = size.width as f64 / ((400. + SPACING) * 7. - SPACING);
 
                 let mut buffer = surface.buffer_mut().unwrap();
 
@@ -187,46 +204,13 @@ impl ApplicationHandler for SetApp {
                     unsafe { std::slice::from_raw_parts_mut(ptr, len) }
                 };
 
-                draw_projcard(&mut self.renderer, &self.card, &self.circle, 0b111111);
-
-                self.renderer.set_transform(
-                    Affine::scale(0.8)
-                        .with_translation(Vec2::new(440., 460.))
-                        .then_scale(self.scale),
-                );
-                self.renderer.set_paint(css::WHITE);
-                self.renderer.fill_path(&self.card);
-
-                self.renderer
-                    .set_transform(Affine::translate(Vec2::new(500., 500.)).then_scale(self.scale));
-                draw_shape(
-                    &mut self.renderer,
-                    &self.oval,
-                    SetFilling::Striped,
-                    css::RED,
-                );
-
-                self.renderer
-                    .set_transform(Affine::translate(Vec2::new(500., 650.)).then_scale(self.scale));
-                draw_shape(
-                    &mut self.renderer,
-                    &self.diamond,
-                    SetFilling::Open,
-                    css::GREEN,
-                );
-
-                self.renderer
-                    .set_transform(Affine::translate(Vec2::new(500., 800.)).then_scale(self.scale));
-                draw_shape(
-                    &mut self.renderer,
-                    &self.squiggle,
-                    SetFilling::Solid,
-                    css::REBECCA_PURPLE,
-                );
-
-                self.renderer
-                    .set_transform(Affine::translate(Vec2::new(800., 300.)).then_scale(self.scale));
-                draw_projcard(&mut self.renderer, &self.card, &self.circle, 0b110101);
+                for (i, &card) in self.cards.iter().enumerate() {
+                    self.renderer.set_transform(
+                        Affine::translate(Vec2::new((400. + SPACING) * i as f64, 0.))
+                            .then_scale(cardscale),
+                    );
+                    draw_projcard(&mut self.renderer, &self.card, &self.circle, card);
+                }
 
                 self.renderer.flush();
                 self.renderer.render_to_buffer(
