@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{num::NonZeroU32, rc::Rc};
+use std::{num::NonZeroU32, rc::Rc, time::Instant};
 
 use softbuffer::{Context, Surface};
 use vello_cpu::{
@@ -346,5 +346,7 @@ fn draw_shape(
 fn main() {
     let event_loop = EventLoop::new().unwrap();
     let mut app = SetApp::new();
+    let now = Instant::now();
     event_loop.run_app(&mut app).unwrap();
+    println!("Finished in {} seconds", now.elapsed().as_secs());
 }

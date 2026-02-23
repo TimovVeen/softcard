@@ -9,6 +9,9 @@ softbuffer = "0.4.8"
 vello_cpu = "0.0.6"
 winit = "0.30.12"
 
+[profile.dev]
+opt-level = 2
+
 [profile.release]
 strip = "debuginfo"
 codegen-units = 1
