@@ -179,6 +179,9 @@ impl ApplicationHandler for SetApp {
                     },
                 ..
             } => {
+                if str == "q" {
+                    print_solution(&self.cards);
+                }
                 if let Ok(num) = str.parse::<u8>()
                     && num > 0
                     && num <= 7
@@ -288,6 +291,25 @@ impl ApplicationHandler for SetApp {
                 buffer.present().unwrap();
             }
             _ => {}
+        }
+    }
+}
+
+fn print_solution(cards: &[u8; 7]) {
+    for i in 1..0b10000000_usize {
+        if i.count_ones() < 3 {
+            continue;
+        }
+
+        let mut sels = i;
+        let mut res = 0;
+        while sels != 0 {
+            res ^= cards[sels.trailing_zeros() as usize];
+            sels &= sels - 1;
+        }
+        if res == 0 {
+            println!("{:b}", i);
+            return;
         }
     }
 }
