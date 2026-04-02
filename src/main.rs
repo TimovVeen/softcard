@@ -1,19 +1,23 @@
 #![allow(dead_code)]
+#![no_std]
 
-use std::{num::NonZeroU32, rc::Rc, time::Instant};
+use core::num::NonZeroU32;
+
+extern crate alloc;
+use alloc::rc::Rc;
 
 use softbuffer::{Context, Surface};
 use vello_cpu::{
     PaintType, RenderContext, RenderMode, RenderSettings,
     color::palette::css,
-    kurbo::{Affine, BezPath, Circle, Line, Point, RoundedRect, Shape, Stroke, Vec2},
+    kurbo::{Affine, BezPath, Circle, Line, Point, Rect, RoundedRect, Shape, Stroke, Vec2},
 };
 use winit::{
     application::ApplicationHandler,
     event::{ElementState, KeyEvent, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoop},
     keyboard::{Key, NamedKey},
-    window::{Window, WindowId},
+    window::{Window, WindowAttributes, WindowId},
 };
 
 const TOLERANCE: f64 = 0.1;
@@ -25,6 +29,7 @@ const RADIUS: f64 = 60.;
 const CARD_WIDTH: f64 = 400.;
 const CARD_HEIGHT: f64 = 600.;
 
+const WINDOW_MARGIN: f64 = 20.;
 const SPACING: f64 = 20.;
 const MARGIN: f64 = 50.;
 const PADDING: f64 = 60.;
@@ -103,8 +108,8 @@ impl SetApp {
         Self {
             render_state: None,
             renderer: RenderContext::new_with(
-                1980,
-                1080,
+                500,
+                270,
                 RenderSettings {
                     num_threads: 0,
                     ..Default::default()
@@ -134,11 +139,13 @@ impl ApplicationHandler for SetApp {
             return;
         }
 
-        let window = Rc::new(
-            event_loop
-                .create_window(Window::default_attributes())
-                .unwrap(),
-        );
+        let attributes =
+            WindowAttributes::default().with_inner_size(winit::dpi::LogicalSize::new(800., 600.));
+        #[cfg(target_family = "wasm")]
+        let attributes =
+            winit::platform::web::WindowAttributesExtWebSys::with_append(attributes, true);
+
+        let window = Rc::new(event_loop.create_window(attributes).unwrap());
         let context = Context::new(window.clone()).unwrap();
         let surface = Surface::new(&context, window.clone()).unwrap();
 
@@ -194,14 +201,12 @@ impl ApplicationHandler for SetApp {
                         sels &= sels - 1;
                     }
                     if res == 0 && self.selection != 0 {
-                        println!("you got a set");
                         let mut sels = self.selection;
                         while sels != 0 {
                             self.cards[sels.trailing_zeros() as usize] =
                                 self.all_cards[self.card_head];
                             self.card_head += 1;
                             if self.card_head >= 63 {
-                                println!("you win");
                                 event_loop.exit();
                                 return;
                             }
@@ -246,23 +251,21 @@ impl ApplicationHandler for SetApp {
                 self.renderer.set_transform(Affine::scale(self.scale));
 
                 let size = window.inner_size();
-                let x_cardscale = size.width as f64 / ((CARD_WIDTH + SPACING) * 4. - SPACING);
-                let y_cardscale = size.height as f64 / ((CARD_HEIGHT + SPACING) * 2. - SPACING);
+                let x_cardscale = size.width as f64
+                    / ((CARD_WIDTH + SPACING) * 4. - SPACING + WINDOW_MARGIN * 2.);
+                let y_cardscale = size.height as f64
+                    / ((CARD_HEIGHT + SPACING) * 2. - SPACING + WINDOW_MARGIN * 2.);
 
-                let mut buffer = surface.buffer_mut().unwrap();
-
-                let bufslice = {
-                    let len = buffer.len() * 4;
-                    let ptr = buffer.as_mut_ptr() as *mut u8;
-                    unsafe { std::slice::from_raw_parts_mut(ptr, len) }
-                };
+                self.renderer.set_paint(css::WHITE);
+                self.renderer
+                    .fill_rect(&Rect::new(0., 0., size.width as f64, size.height as f64));
 
                 for (i, &card) in self.cards.iter().enumerate() {
                     // use bithacks instead?
                     self.renderer.set_transform(
                         Affine::translate(Vec2::new(
-                            (CARD_WIDTH + SPACING) * (i % 4) as f64,
-                            (CARD_HEIGHT + SPACING) * (i / 4) as f64,
+                            WINDOW_MARGIN + (CARD_WIDTH + SPACING) * (i % 4) as f64,
+                            WINDOW_MARGIN + (CARD_HEIGHT + SPACING) * (i / 4) as f64,
                         ))
                         .then_scale(f64::min(x_cardscale, y_cardscale)),
                     );
@@ -271,6 +274,15 @@ impl ApplicationHandler for SetApp {
                 }
 
                 self.renderer.flush();
+
+                let mut buffer = surface.buffer_mut().unwrap();
+
+                let bufslice = {
+                    let len = buffer.len() * 4;
+                    let ptr = buffer.as_mut_ptr() as *mut u8;
+                    unsafe { core::slice::from_raw_parts_mut(ptr, len) }
+                };
+
                 self.renderer.render_to_buffer(
                     bufslice,
                     size.width as u16,
@@ -308,7 +320,6 @@ fn print_solution(cards: &[u8; 7]) {
             sels &= sels - 1;
         }
         if res == 0 {
-            println!("{:b}", i);
             return;
         }
     }
@@ -316,6 +327,9 @@ fn print_solution(cards: &[u8; 7]) {
 
 fn draw_projcard(ctx: &mut RenderContext, card: &BezPath, dot: &BezPath, mask: u8, selected: bool) {
     let trans = *ctx.transform();
+    ctx.set_paint(css::BLACK);
+    ctx.set_stroke(Stroke::new(5.));
+    ctx.stroke_path(card);
     ctx.set_paint(if selected { css::GRAY } else { css::WHITE });
     ctx.fill_path(card);
 
@@ -365,10 +379,14 @@ fn draw_shape(
     }
 }
 
+#[allow(unused_mut)]
 fn main() {
     let event_loop = EventLoop::new().unwrap();
     let mut app = SetApp::new();
-    let now = Instant::now();
+
+    #[cfg(not(target_family = "wasm"))]
     event_loop.run_app(&mut app).unwrap();
-    println!("Finished in {} seconds", now.elapsed().as_secs());
+
+    #[cfg(target_family = "wasm")]
+    winit::platform::web::EventLoopExtWebSys::spawn_app(event_loop, app);
 }
