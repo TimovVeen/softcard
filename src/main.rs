@@ -10,7 +10,7 @@ use log::info;
 use softbuffer::{Context, Surface};
 use vello_cpu::{
     PaintType, RenderContext, RenderMode, RenderSettings,
-    color::palette::css,
+    color::{AlphaColor, Srgb, palette::css},
     kurbo::{Affine, BezPath, Circle, Line, Point, Rect, RoundedRect, Shape, Stroke, Vec2},
 };
 use web_time::Instant;
@@ -47,13 +47,14 @@ const CARDS: [u8; 63] = {
     }
     res
 };
-const COLORS: [vello_cpu::color::AlphaColor<vello_cpu::color::Srgb>; 6] = [
-    css::RED,
-    css::ORANGE,
-    css::YELLOW,
-    css::GREEN,
-    css::BLUE,
-    css::PURPLE,
+
+const COLORS: [AlphaColor<Srgb>; 6] = [
+    map_col(css::RED),
+    map_col(css::ORANGE),
+    map_col(css::YELLOW),
+    map_col(css::GREEN),
+    map_col(css::BLUE),
+    map_col(css::PURPLE),
 ];
 
 enum SetFilling {
@@ -277,6 +278,8 @@ impl ApplicationHandler for SetApp {
                     draw_projcard(&mut self.renderer, &self.card, &self.circle, card, selected);
                 }
 
+                self.renderer.set_paint(css::BLACK);
+
                 self.renderer.flush();
 
                 let mut buffer = surface.buffer_mut().unwrap();
@@ -293,16 +296,6 @@ impl ApplicationHandler for SetApp {
                     size.height as u16,
                     RenderMode::OptimizeSpeed,
                 );
-
-                // Convert BGRA to RGBA
-                unsafe {
-                    bufslice
-                        .as_chunks_unchecked_mut::<4>()
-                        .iter_mut()
-                        .for_each(|chunk| {
-                            chunk.swap(0, 2);
-                        });
-                }
 
                 buffer.present().unwrap();
             }
@@ -382,6 +375,12 @@ fn draw_shape(
         }
         SetFilling::Open => (),
     }
+}
+
+const fn map_col(input: AlphaColor<Srgb>) -> AlphaColor<Srgb> {
+    let mut comps = input.components;
+    comps.swap(0, 2);
+    AlphaColor::new(comps)
 }
 
 #[allow(unused_mut)]
