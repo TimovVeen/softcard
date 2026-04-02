@@ -6,12 +6,14 @@ use core::num::NonZeroU32;
 extern crate alloc;
 use alloc::rc::Rc;
 
+use log::info;
 use softbuffer::{Context, Surface};
 use vello_cpu::{
     PaintType, RenderContext, RenderMode, RenderSettings,
     color::palette::css,
     kurbo::{Affine, BezPath, Circle, Line, Point, Rect, RoundedRect, Shape, Stroke, Vec2},
 };
+use web_time::Instant;
 use winit::{
     application::ApplicationHandler,
     event::{ElementState, KeyEvent, WindowEvent},
@@ -201,12 +203,14 @@ impl ApplicationHandler for SetApp {
                         sels &= sels - 1;
                     }
                     if res == 0 && self.selection != 0 {
+                        info!("You got a set!");
                         let mut sels = self.selection;
                         while sels != 0 {
                             self.cards[sels.trailing_zeros() as usize] =
                                 self.all_cards[self.card_head];
                             self.card_head += 1;
                             if self.card_head >= 63 {
+                                info!("You win!");
                                 event_loop.exit();
                                 return;
                             }
@@ -320,6 +324,7 @@ fn print_solution(cards: &[u8; 7]) {
             sels &= sels - 1;
         }
         if res == 0 {
+            info!("{:b}", i);
             return;
         }
     }
@@ -381,12 +386,20 @@ fn draw_shape(
 
 #[allow(unused_mut)]
 fn main() {
+    #[cfg(not(target_family = "wasm"))]
+    simple_logger::init_with_level(log::Level::Info).unwrap();
+    #[cfg(target_family = "wasm")]
+    console_log::init_with_level(log::Level::Info).unwrap();
+
+    let now = Instant::now();
+
     let event_loop = EventLoop::new().unwrap();
     let mut app = SetApp::new();
 
     #[cfg(not(target_family = "wasm"))]
     event_loop.run_app(&mut app).unwrap();
-
     #[cfg(target_family = "wasm")]
     winit::platform::web::EventLoopExtWebSys::spawn_app(event_loop, app);
+
+    info!("Finished in {} seconds.", now.elapsed().as_secs());
 }
