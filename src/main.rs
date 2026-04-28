@@ -22,7 +22,7 @@ use winit::{
     window::{Window, WindowAttributes, WindowId},
 };
 
-const TOLERANCE: f64 = 0.1;
+const TOLERANCE: f64 = 5.;
 const STROKE_WIDTH: f64 = 7.;
 const STRIPE_WIDTH: f64 = 3.;
 
@@ -240,20 +240,13 @@ impl ApplicationHandler for SetApp {
                     )
                     .unwrap();
 
-                self.renderer = RenderContext::new_with(
-                    width as u16,
-                    height as u16,
-                    RenderSettings {
-                        num_threads: 0,
-                        ..Default::default()
-                    },
-                );
+                self.renderer =
+                    RenderContext::new_with(width as u16, height as u16, RenderSettings::default());
 
                 window.request_redraw();
             }
             WindowEvent::RedrawRequested => {
                 self.renderer.reset();
-                self.renderer.set_transform(Affine::scale(self.scale));
 
                 let size = window.inner_size();
                 let x_cardscale = size.width as f64
@@ -277,8 +270,6 @@ impl ApplicationHandler for SetApp {
                     let selected = self.selection & (1 << i) != 0;
                     draw_projcard(&mut self.renderer, &self.card, &self.circle, card, selected);
                 }
-
-                self.renderer.set_paint(css::BLACK);
 
                 self.renderer.flush();
 
@@ -325,11 +316,14 @@ fn print_solution(cards: &[u8; 7]) {
 
 fn draw_projcard(ctx: &mut RenderContext, card: &BezPath, dot: &BezPath, mask: u8, selected: bool) {
     let trans = *ctx.transform();
+    if selected {
+        ctx.set_paint(css::GRAY);
+        ctx.fill_path(card);
+    }
+
     ctx.set_paint(css::BLACK);
-    ctx.set_stroke(Stroke::new(5.));
+    ctx.set_stroke(Stroke::new(3.));
     ctx.stroke_path(card);
-    ctx.set_paint(if selected { css::GRAY } else { css::WHITE });
-    ctx.fill_path(card);
 
     for i in 0..3 {
         for j in 0..2 {
