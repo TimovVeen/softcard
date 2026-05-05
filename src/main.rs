@@ -81,6 +81,7 @@ struct SetApp {
     all_cards: [u8; 63],
     selection: u8,
     card_head: usize,
+    hovered_card: Option<usize>,
 }
 
 impl SetApp {
@@ -128,6 +129,7 @@ impl SetApp {
             all_cards,
             selection: 0,
             card_head: 7,
+            hovered_card: None,
         }
     }
 }
@@ -197,6 +199,7 @@ impl ApplicationHandler for SetApp {
                     && num <= 7
                 {
                     self.selection ^= 1 << (num - 1);
+
                     let mut res = 0;
                     let mut sels = self.selection;
                     while sels != 0 {
@@ -220,7 +223,66 @@ impl ApplicationHandler for SetApp {
                         }
                         self.selection = 0;
                     }
+
                     window.request_redraw();
+                };
+            }
+            WindowEvent::MouseInput {
+                state: ElementState::Pressed,
+                button: winit::event::MouseButton::Left,
+                ..
+            } => {
+                if let Some(card) = self.hovered_card
+                    && (0..7).contains(&card)
+                {
+                    self.selection ^= 1 << card;
+
+                    // TODO: Absolutely horrid code duplication, please fix the borrowing issue at some point
+                    let mut res = 0;
+                    let mut sels = self.selection;
+                    while sels != 0 {
+                        res ^= self.cards[sels.trailing_zeros() as usize];
+                        sels &= sels - 1;
+                    }
+                    if res == 0 && self.selection != 0 {
+                        info!("You got a set!");
+                        let mut sels = self.selection;
+                        while sels != 0 {
+                            self.cards[sels.trailing_zeros() as usize] =
+                                self.all_cards[self.card_head];
+                            self.card_head += 1;
+                            if self.card_head >= 63 {
+                                info!("You win!");
+                                event_loop.exit();
+                                return;
+                            }
+
+                            sels &= sels - 1;
+                        }
+                        self.selection = 0;
+                    }
+
+                    window.request_redraw();
+                }
+            }
+            WindowEvent::CursorMoved { position, .. } => {
+                // TODO: code duplication, and math can be simplified
+                let size = window.inner_size();
+                let x_cardscale = size.width as f64
+                    / ((CARD_WIDTH + SPACING) * 4. - SPACING + WINDOW_MARGIN * 2.);
+                let y_cardscale = size.height as f64
+                    / ((CARD_HEIGHT + SPACING) * 2. - SPACING + WINDOW_MARGIN * 2.);
+                let cardscale = f64::min(x_cardscale, y_cardscale);
+
+                let horizontal = ((position.x / cardscale - WINDOW_MARGIN) / (CARD_WIDTH + SPACING))
+                    .floor() as i32;
+                let vertical = ((position.y / cardscale - WINDOW_MARGIN) / (CARD_HEIGHT + SPACING))
+                    .floor() as i32;
+                let res_idx = vertical * 4 + horizontal;
+                self.hovered_card = if !(0..4).contains(&horizontal) || !(0..7).contains(&res_idx) {
+                    None
+                } else {
+                    Some(res_idx as usize)
                 };
             }
             WindowEvent::ScaleFactorChanged {
