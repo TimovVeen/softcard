@@ -193,8 +193,10 @@ impl ApplicationHandler for SetApp {
             } => {
                 if str == "q" {
                     print_solution(&self.cards);
-                }
-                if let Ok(num) = str.parse::<u8>()
+                } else if str == "c" {
+                    self.selection = 0;
+                    window.request_redraw();
+                } else if let Ok(num) = str.parse::<u8>()
                     && num > 0
                     && num <= 7
                 {
