@@ -1,6 +1,6 @@
 use iced::{
     Color, Element, Length, Point, Rectangle, Renderer, Size, Theme, keyboard, mouse,
-    widget::canvas::{self, Canvas, Path, Stroke, event::Status},
+    widget::canvas::{self, Canvas, Path, Stroke},
 };
 use log::info;
 
@@ -103,6 +103,23 @@ impl SetApp {
 
         self.selection = 0;
     }
+
+    fn update(&mut self, message: Message) {
+        match message {
+            Message::ToggleCard(card) => self.toggle_card(card),
+            Message::KeyPressed(key) => self.handle_key(key),
+        }
+    }
+
+    fn view(&self) -> Element<'_, Message> {
+        Canvas::new(Board {
+            cards: self.cards,
+            selection: self.selection,
+        })
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .into()
+    }
 }
 
 impl Default for SetApp {
@@ -117,23 +134,6 @@ enum Message {
     KeyPressed(keyboard::Key),
 }
 
-fn update(app: &mut SetApp, message: Message) {
-    match message {
-        Message::ToggleCard(card) => app.toggle_card(card),
-        Message::KeyPressed(key) => app.handle_key(key),
-    }
-}
-
-fn view(app: &SetApp) -> Element<'_, Message> {
-    Canvas::new(Board {
-        cards: app.cards,
-        selection: app.selection,
-    })
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .into()
-}
-
 #[derive(Debug, Clone, Copy)]
 struct Board {
     cards: [u8; 7],
@@ -146,23 +146,23 @@ impl canvas::Program<Message> for Board {
     fn update(
         &self,
         _state: &mut Self::State,
-        event: canvas::Event,
+        event: &canvas::Event,
         bounds: Rectangle,
         cursor: mouse::Cursor,
-    ) -> (Status, Option<Message>) {
+    ) -> Option<canvas::Action<Message>> {
         match event {
             canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 if let Some(position) = cursor_position(cursor)
                     && let Some(card) = card_at(position, bounds)
                 {
-                    return (Status::Captured, Some(Message::ToggleCard(card)));
+                    return Some(canvas::Action::publish(Message::ToggleCard(card)).and_capture());
                 }
-                (Status::Ignored, None)
+                None
             }
             canvas::Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) => {
-                (Status::Captured, Some(Message::KeyPressed(key)))
+                Some(canvas::Action::publish(Message::KeyPressed(key.clone())).and_capture())
             }
-            _ => (Status::Ignored, None),
+            _ => None,
         }
     }
 
@@ -219,6 +219,7 @@ fn cursor_position(cursor: mouse::Cursor) -> Option<Point> {
     match cursor {
         mouse::Cursor::Available(position) => Some(position),
         mouse::Cursor::Unavailable => None,
+        mouse::Cursor::Levitating(position) => Some(position),
     }
 }
 
@@ -309,7 +310,7 @@ fn main() -> iced::Result {
     #[cfg(target_family = "wasm")]
     console_log::init_with_level(log::Level::Info).unwrap();
 
-    iced::application("Softcard", update, view)
+    iced::application(SetApp::default, SetApp::update, SetApp::view)
         .window_size((800., 600.))
         .run()
 }
