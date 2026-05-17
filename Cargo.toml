@@ -4,6 +4,7 @@ members = ["run-wasm"]
 [package]
 name = "softcard"
 version = "0.1.0"
+rust-version = "1.95"
 edition = "2024"
 
 [dependencies]

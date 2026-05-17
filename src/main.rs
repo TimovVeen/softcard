@@ -118,13 +118,13 @@ impl SetApp {
                 keyboard::Key::Character("c") | keyboard::Key::Character("C") => {
                     self.selection = 0;
                 }
-                keyboard::Key::Character(ch) => {
+                keyboard::Key::Character(ch)
                     if let Ok(num) = ch.parse::<u8>()
-                        && (1..=7).contains(&num)
-                    {
-                        self.toggle_card((num - 1) as usize);
-                    }
+                        && (1..=7).contains(&num) =>
+                {
+                    self.toggle_card((num - 1) as usize);
                 }
+
                 _ => {}
             }
         }
