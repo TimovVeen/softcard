@@ -1,19 +1,28 @@
 use iced::{
-    Color, Element, Length, Point, Rectangle, Renderer, Size, Theme, keyboard, mouse,
-    widget::canvas::{self, Canvas, Path, Stroke},
+    Border, Color, Element, Length, Point, Rectangle, Renderer, Subscription, Theme, keyboard,
+    mouse,
+    widget::{
+        canvas::{self, Path},
+        container, mouse_area,
+    },
 };
 use log::info;
 
-const RADIUS: f32 = 60.0;
-const CARD_WIDTH: f32 = 400.0;
-const CARD_HEIGHT: f32 = 600.0;
+const BOARD_PADDING: f32 = 20.0;
+const GRID_SPACING: f32 = 20.0;
+const CARD_ASPECT_WIDTH: f32 = 2.0;
+const CARD_ASPECT_HEIGHT: f32 = 3.0;
+const CARD_INNER_PADDING: f32 = 8.0;
+const DOT_RADIUS_RATIO: f32 = 0.15;
 
-const WINDOW_MARGIN: f32 = 20.0;
-const SPACING: f32 = 20.0;
-const MARGIN: f32 = 50.0;
-const PADDING: f32 = 60.0;
-const OFFSET: f32 = 2.0 * RADIUS + PADDING;
-const MARGIN_OFFSET: f32 = MARGIN + RADIUS;
+const CARD_COLORS: [Color; 6] = [
+    Color::from_rgb8(0xFF, 0x00, 0x00),
+    Color::from_rgb8(0xFF, 0xA5, 0x00),
+    Color::from_rgb8(0xFF, 0xD7, 0x00),
+    Color::from_rgb8(0x00, 0x80, 0x00),
+    Color::from_rgb8(0x00, 0x00, 0xFF),
+    Color::from_rgb8(0x80, 0x00, 0x80),
+];
 
 const CARDS: [u8; 63] = {
     let mut res = [0_u8; _];
@@ -48,22 +57,76 @@ impl SetApp {
         }
     }
 
-    fn handle_key(&mut self, key: keyboard::Key) {
-        match key.as_ref() {
-            keyboard::Key::Character("q") | keyboard::Key::Character("Q") => {
-                print_solution(&self.cards);
-            }
-            keyboard::Key::Character("c") | keyboard::Key::Character("C") => {
-                self.selection = 0;
-            }
-            keyboard::Key::Character(ch) => {
-                if let Ok(num) = ch.parse::<u8>()
-                    && (1..=7).contains(&num)
-                {
-                    self.toggle_card((num - 1) as usize);
+    fn update(&mut self, message: Message) {
+        match message {
+            Message::ToggleCard(card) => self.toggle_card(card),
+            Message::KeyboardEvent(event) => self.handle_keyboard_event(event),
+        }
+    }
+
+    fn view(&self) -> Element<'_, Message> {
+        let cards = iced::widget::grid![
+            self.card_widget(0),
+            self.card_widget(1),
+            self.card_widget(2),
+            self.card_widget(3),
+            self.card_widget(4),
+            self.card_widget(5),
+            self.card_widget(6),
+        ]
+        .columns(4)
+        .spacing(GRID_SPACING)
+        .height(iced::widget::grid::aspect_ratio(
+            CARD_ASPECT_WIDTH,
+            CARD_ASPECT_HEIGHT,
+        ));
+
+        container(cards)
+            .padding(BOARD_PADDING)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+    }
+
+    fn card_widget(&self, index: usize) -> Element<'_, Message> {
+        let selected = self.is_selected(index);
+        let card = container(
+            canvas::Canvas::new(CardCanvas {
+                mask: self.cards[index],
+            })
+            .width(Length::Fill)
+            .height(Length::Fill),
+        )
+        .padding(CARD_INNER_PADDING)
+        .style(move |_theme| card_style(selected));
+
+        if self.finished {
+            card.into()
+        } else {
+            mouse_area(card).on_press(Message::ToggleCard(index)).into()
+        }
+    }
+
+    fn handle_keyboard_event(&mut self, event: keyboard::Event) {
+        if let keyboard::Event::KeyPressed { key, repeat, .. } = event
+            && !repeat
+        {
+            match key.as_ref() {
+                keyboard::Key::Character("q") | keyboard::Key::Character("Q") => {
+                    self.print_solution();
                 }
+                keyboard::Key::Character("c") | keyboard::Key::Character("C") => {
+                    self.selection = 0;
+                }
+                keyboard::Key::Character(ch) => {
+                    if let Ok(num) = ch.parse::<u8>()
+                        && (1..=7).contains(&num)
+                    {
+                        self.toggle_card((num - 1) as usize);
+                    }
+                }
+                _ => {}
             }
-            _ => {}
         }
     }
 
@@ -77,11 +140,7 @@ impl SetApp {
     }
 
     fn resolve_selection(&mut self) {
-        if self.selection == 0 {
-            return;
-        }
-
-        if xor_selected(self.selection, &self.cards) != 0 {
+        if self.selection == 0 || self.xor_selected(self.selection) != 0 {
             return;
         }
 
@@ -104,21 +163,31 @@ impl SetApp {
         self.selection = 0;
     }
 
-    fn update(&mut self, message: Message) {
-        match message {
-            Message::ToggleCard(card) => self.toggle_card(card),
-            Message::KeyPressed(key) => self.handle_key(key),
+    fn xor_selected(&self, selection: u8) -> u8 {
+        let mut sels = selection;
+        let mut res = 0;
+        while sels != 0 {
+            res ^= self.cards[sels.trailing_zeros() as usize];
+            sels &= sels - 1;
+        }
+        res
+    }
+
+    fn print_solution(&self) {
+        for selection in 1..0b10000000_u8 {
+            if selection.count_ones() < 3 {
+                continue;
+            }
+
+            if self.xor_selected(selection) == 0 {
+                info!("{selection:b}");
+                return;
+            }
         }
     }
 
-    fn view(&self) -> Element<'_, Message> {
-        Canvas::new(Board {
-            cards: self.cards,
-            selection: self.selection,
-        })
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .into()
+    fn is_selected(&self, index: usize) -> bool {
+        self.selection & (1 << index) != 0
     }
 }
 
@@ -131,40 +200,16 @@ impl Default for SetApp {
 #[derive(Debug, Clone)]
 enum Message {
     ToggleCard(usize),
-    KeyPressed(keyboard::Key),
+    KeyboardEvent(keyboard::Event),
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Board {
-    cards: [u8; 7],
-    selection: u8,
+struct CardCanvas {
+    mask: u8,
 }
 
-impl canvas::Program<Message> for Board {
+impl<Message> canvas::Program<Message> for CardCanvas {
     type State = ();
-
-    fn update(
-        &self,
-        _state: &mut Self::State,
-        event: &canvas::Event,
-        bounds: Rectangle,
-        cursor: mouse::Cursor,
-    ) -> Option<canvas::Action<Message>> {
-        match event {
-            canvas::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-                if let Some(position) = cursor_position(cursor)
-                    && let Some(card) = card_at(position, bounds)
-                {
-                    return Some(canvas::Action::publish(Message::ToggleCard(card)).and_capture());
-                }
-                None
-            }
-            canvas::Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) => {
-                Some(canvas::Action::publish(Message::KeyPressed(key.clone())).and_capture())
-            }
-            _ => None,
-        }
-    }
 
     fn draw(
         &self,
@@ -175,132 +220,45 @@ impl canvas::Program<Message> for Board {
         _cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
         let mut frame = canvas::Frame::new(renderer, bounds.size());
-        let background = Path::rectangle(Point::ORIGIN, bounds.size());
-        frame.fill(&background, Color::WHITE);
 
-        let card_scale = card_scale(bounds.size());
+        let radius = bounds.width * DOT_RADIUS_RATIO;
+        for (row, y) in [0.18333334, 0.48333335, 0.78333336].iter().enumerate() {
+            for (col, x) in [0.275, 0.725].iter().enumerate() {
+                let idx = row * 2 + col;
+                if self.mask & (1 << idx) == 0 {
+                    continue;
+                }
 
-        for (i, &card) in self.cards.iter().enumerate() {
-            let selected = self.selection & (1 << i) != 0;
-            draw_projcard(
-                &mut frame,
-                Point::new(
-                    WINDOW_MARGIN + (CARD_WIDTH + SPACING) * (i % 4) as f32,
-                    WINDOW_MARGIN + (CARD_HEIGHT + SPACING) * (i / 4) as f32,
-                ),
-                card_scale,
-                card,
-                selected,
-            );
+                let center = Point::new(bounds.width * x, bounds.height * y);
+                let dot = Path::circle(center, radius);
+                frame.fill(&dot, CARD_COLORS[idx]);
+            }
         }
 
         vec![frame.into_geometry()]
     }
 }
 
-fn xor_selected(selection: u8, cards: &[u8; 7]) -> u8 {
-    let mut sels = selection;
-    let mut res = 0;
-    while sels != 0 {
-        res ^= cards[sels.trailing_zeros() as usize];
-        sels &= sels - 1;
-    }
-    res
+fn subscription(_app: &SetApp) -> Subscription<Message> {
+    keyboard::listen().map(Message::KeyboardEvent)
 }
 
-fn card_scale(size: Size) -> f32 {
-    let x_cardscale = size.width / ((CARD_WIDTH + SPACING) * 4.0 - SPACING + WINDOW_MARGIN * 2.0);
-    let y_cardscale = size.height / ((CARD_HEIGHT + SPACING) * 2.0 - SPACING + WINDOW_MARGIN * 2.0);
-
-    x_cardscale.min(y_cardscale)
-}
-
-fn cursor_position(cursor: mouse::Cursor) -> Option<Point> {
-    match cursor {
-        mouse::Cursor::Available(position) => Some(position),
-        mouse::Cursor::Unavailable => None,
-        mouse::Cursor::Levitating(position) => Some(position),
-    }
-}
-
-fn card_at(position: Point, bounds: Rectangle) -> Option<usize> {
-    let local_x = position.x - bounds.x;
-    let local_y = position.y - bounds.y;
-    if local_x < 0.0 || local_y < 0.0 {
-        return None;
-    }
-
-    let cardscale = card_scale(bounds.size());
-    if cardscale <= 0.0 {
-        return None;
-    }
-
-    let horizontal =
-        ((local_x / cardscale - WINDOW_MARGIN) / (CARD_WIDTH + SPACING)).floor() as i32;
-    let vertical = ((local_y / cardscale - WINDOW_MARGIN) / (CARD_HEIGHT + SPACING)).floor() as i32;
-    let index = vertical * 4 + horizontal;
-
-    if !(0..4).contains(&horizontal) || !(0..7).contains(&index) {
-        return None;
-    }
-
-    Some(index as usize)
-}
-
-fn draw_projcard(frame: &mut canvas::Frame, origin: Point, scale: f32, mask: u8, selected: bool) {
-    let card_size = Size::new(CARD_WIDTH * scale, CARD_HEIGHT * scale);
-    let card = Path::rectangle(origin, card_size);
-
-    if selected {
-        frame.fill(&card, Color::from_rgb8(0xE0, 0xE0, 0xE0));
-    }
-
-    frame.stroke(
-        &card,
-        Stroke {
-            width: 3.0 * scale,
-            style: Color::BLACK.into(),
-            ..Stroke::default()
-        },
-    );
-
-    for i in 0..3 {
-        for j in 0..2 {
-            let idx = i * 2 + j;
-            if (1 << idx) & mask != 0 {
-                let center = Point::new(
-                    origin.x + (MARGIN_OFFSET + OFFSET * j as f32) * scale,
-                    origin.y + (MARGIN_OFFSET + OFFSET * i as f32) * scale,
-                );
-                let dot = Path::circle(center, RADIUS * scale);
-                frame.fill(&dot, color(idx));
+fn card_style(selected: bool) -> container::Style {
+    container::Style {
+        background: Some(
+            if selected {
+                Color::from_rgb8(0x71, 0x77, 0x7F)
+            } else {
+                Color::WHITE
             }
-        }
-    }
-}
-
-fn color(idx: usize) -> Color {
-    match idx {
-        0 => Color::from_rgb8(0xFF, 0x00, 0x00),
-        1 => Color::from_rgb8(0xFF, 0xA5, 0x00),
-        2 => Color::from_rgb8(0xFF, 0xD7, 0x00),
-        3 => Color::from_rgb8(0x00, 0x80, 0x00),
-        4 => Color::from_rgb8(0x00, 0x00, 0xFF),
-        5 => Color::from_rgb8(0x80, 0x00, 0x80),
-        _ => Color::BLACK,
-    }
-}
-
-fn print_solution(cards: &[u8; 7]) {
-    for i in 1..0b10000000_usize {
-        if i.count_ones() < 3 {
-            continue;
-        }
-
-        if xor_selected(i as u8, cards) == 0 {
-            info!("{:b}", i);
-            return;
-        }
+            .into(),
+        ),
+        border: Border {
+            color: Color::BLACK,
+            width: 2.,
+            radius: 10.0.into(),
+        },
+        ..Default::default()
     }
 }
 
@@ -311,6 +269,8 @@ fn main() -> iced::Result {
     console_log::init_with_level(log::Level::Info).unwrap();
 
     iced::application(SetApp::default, SetApp::update, SetApp::view)
+        .title("Softcard")
+        .subscription(subscription)
         .window_size((800., 600.))
         .run()
 }
