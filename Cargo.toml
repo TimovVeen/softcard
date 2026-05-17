@@ -9,12 +9,9 @@ edition = "2024"
 [dependencies]
 console_log = "1.0.0"
 fastrand = "2.3.0"
+iced = { version = "0.13.1", features = ["canvas", "webgl"] }
 log = "0.4.29"
 simple_logger = { version = "5.2.0", default-features = false }
-softbuffer = "0.4.8"
-vello_cpu = { version = "0.0.7", default-features = false, features = ["libm", "text", "u8_pipeline"] }
-web-time = "1.1.0"
-winit = "0.30.13"
 
 [profile.dev]
 opt-level = 2
