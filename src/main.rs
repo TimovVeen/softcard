@@ -2,17 +2,17 @@ use iced::{
     Border, Color, Element, Length, Point, Rectangle, Renderer, Subscription, Theme, keyboard,
     mouse,
     widget::{
+        self,
         canvas::{self, Path},
-        container, mouse_area,
+        container, grid, mouse_area,
     },
 };
 use log::info;
 
-const BOARD_PADDING: f32 = 20.0;
-const GRID_SPACING: f32 = 20.0;
-const CARD_ASPECT_WIDTH: f32 = 2.0;
-const CARD_ASPECT_HEIGHT: f32 = 3.0;
-const CARD_INNER_PADDING: f32 = 8.0;
+const BOARD_PADDING: f32 = 20.;
+const GRID_SPACING: f32 = 20.;
+const CARD_ASPECT: f32 = 2. / 3.;
+const CARD_INNER_PADDING: f32 = 0.;
 const DOT_RADIUS_RATIO: f32 = 0.15;
 
 const CARD_COLORS: [Color; 6] = [
@@ -65,7 +65,7 @@ impl SetApp {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let cards = iced::widget::grid![
+        let cards = widget::grid![
             self.card_widget(0),
             self.card_widget(1),
             self.card_widget(2),
@@ -76,16 +76,9 @@ impl SetApp {
         ]
         .columns(4)
         .spacing(GRID_SPACING)
-        .height(iced::widget::grid::aspect_ratio(
-            CARD_ASPECT_WIDTH,
-            CARD_ASPECT_HEIGHT,
-        ));
+        .height(grid::Sizing::AspectRatio(CARD_ASPECT));
 
-        container(cards)
-            .padding(BOARD_PADDING)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+        container(cards).padding(BOARD_PADDING).into()
     }
 
     fn card_widget(&self, index: usize) -> Element<'_, Message> {
@@ -98,7 +91,22 @@ impl SetApp {
             .height(Length::Fill),
         )
         .padding(CARD_INNER_PADDING)
-        .style(move |_theme| card_style(selected));
+        .style(move |_theme| container::Style {
+            background: Some(
+                if selected {
+                    Color::from_rgb8(0x71, 0x77, 0x7F)
+                } else {
+                    Color::WHITE
+                }
+                .into(),
+            ),
+            border: Border {
+                color: Color::BLACK,
+                width: 1.5,
+                radius: 10.0.into(),
+            },
+            ..Default::default()
+        });
 
         if self.finished {
             card.into()
@@ -241,25 +249,6 @@ impl<Message> canvas::Program<Message> for CardCanvas {
 
 fn subscription(_app: &SetApp) -> Subscription<Message> {
     keyboard::listen().map(Message::KeyboardEvent)
-}
-
-fn card_style(selected: bool) -> container::Style {
-    container::Style {
-        background: Some(
-            if selected {
-                Color::from_rgb8(0x71, 0x77, 0x7F)
-            } else {
-                Color::WHITE
-            }
-            .into(),
-        ),
-        border: Border {
-            color: Color::BLACK,
-            width: 2.,
-            radius: 10.0.into(),
-        },
-        ..Default::default()
-    }
 }
 
 fn main() -> iced::Result {
