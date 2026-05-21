@@ -260,6 +260,5 @@ fn main() -> iced::Result {
     iced::application(SetApp::default, SetApp::update, SetApp::view)
         .title("Softcard")
         .subscription(subscription)
-        .window_size((800., 600.))
         .run()
 }
