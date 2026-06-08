@@ -1,6 +1,7 @@
 use iced::{
-    Border, Color, Element, Length, Point, Rectangle, Renderer, Subscription, Theme, keyboard,
-    mouse,
+    Border, Color, Element, Length, Point, Rectangle, Renderer, Subscription, Theme,
+    alignment::{Horizontal, Vertical},
+    keyboard, mouse,
     widget::{
         self,
         canvas::{self, Path},
@@ -8,6 +9,7 @@ use iced::{
     },
 };
 use log::info;
+use web_time::Instant;
 
 const BOARD_PADDING: f32 = 20.;
 const GRID_SPACING: f32 = 20.;
@@ -41,6 +43,7 @@ struct SetApp {
     selection: u8,
     card_head: usize,
     finished: bool,
+    start_time: Instant,
 }
 
 impl SetApp {
@@ -54,6 +57,7 @@ impl SetApp {
             selection: 0,
             card_head: 7,
             finished: false,
+            start_time: Instant::now(),
         }
     }
 
@@ -78,7 +82,30 @@ impl SetApp {
         .spacing(GRID_SPACING)
         .height(grid::Sizing::AspectRatio(CARD_ASPECT));
 
-        container(cards).padding(BOARD_PADDING).into()
+        let cards = container(cards).padding(BOARD_PADDING);
+        let menu = container(
+            container(widget::column![
+                widget::text!("Remaining cards: {}", 63 - self.card_head),
+                widget::text!("Time: {:.0?}", self.start_time.elapsed()),
+                widget::button("Try again"),
+            ])
+            .style(|_theme| container::Style {
+                text_color: Some(Color::WHITE),
+                background: Some(Color::BLACK.into()),
+                ..Default::default()
+            })
+            .padding(10.)
+            .center(Length::Shrink),
+        )
+        .align_x(Horizontal::Center)
+        .align_y(Vertical::Center)
+        .center(Length::Fill);
+
+        if self.finished {
+            cards.into()
+        } else {
+            widget::stack![cards, menu].into()
+        }
     }
 
     fn card_widget(&self, index: usize) -> Element<'_, Message> {
@@ -120,11 +147,12 @@ impl SetApp {
             && !repeat
         {
             match key.as_ref() {
-                keyboard::Key::Character("q") | keyboard::Key::Character("Q") => {
-                    self.print_solution();
-                }
-                keyboard::Key::Character("c") | keyboard::Key::Character("C") => {
-                    self.selection = 0;
+                keyboard::Key::Character("h") => self.print_solution(),
+
+                keyboard::Key::Character("c") => self.selection = 0,
+                keyboard::Key::Character("x") => {
+                    self.selection = !self.selection & ((1 << 7) - 1);
+                    self.resolve_selection();
                 }
                 keyboard::Key::Character(ch)
                     if let Ok(num) = ch.parse::<u8>()
@@ -155,7 +183,7 @@ impl SetApp {
         info!("You got a set!");
         let mut sels = self.selection;
         while sels != 0 {
-            if self.card_head >= self.all_cards.len() {
+            if self.card_head >= self.all_cards.len() - 1 {
                 self.finished = true;
                 self.selection = 0;
                 info!("You win!");
