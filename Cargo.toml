@@ -3,17 +3,17 @@ members = ["run-wasm"]
 
 [package]
 name = "softcard"
-version = "0.1.0"
+version = "0.2.0"
 rust-version = "1.95"
 edition = "2024"
 
 [dependencies]
-console_log = "1.0.0"
-fastrand = "2.3.0"
-iced = { git = "https://github.com/iced-rs/iced.git", version = "0.15.0-dev", default-features = false, features = ["tiny-skia", "crisp", "web-colors", "thread-pool", "linux-theme-detection", "x11", "wayland", "canvas"] }
-log = "0.4.29"
-simple_logger = { version = "5.2.0", default-features = false }
+iced = { git = "https://github.com/iced-rs/iced.git", version = "0.15.0-dev", default-features = false, features = ["tiny-skia", "crisp", "web-colors", "thread-pool", "linux-theme-detection", "x11", "wayland", "canvas", "fira-sans"] }
+fastrand = "2.4.1"
 web-time = "1.1.0"
+log = "0.4.32"
+simple_logger = { version = "5.2.0", default-features = false }
+console_log = "1.0.0"
 
 [profile.dev]
 opt-level = 2
