@@ -5,7 +5,7 @@ use iced::{
     widget::{
         self,
         canvas::{self, Path},
-        container, grid, mouse_area,
+        container, grid, mouse_area, responsive,
     },
 };
 use log::info;
@@ -69,20 +69,25 @@ impl SetApp {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let cards = widget::grid![
-            self.card_widget(0),
-            self.card_widget(1),
-            self.card_widget(2),
-            self.card_widget(3),
-            self.card_widget(4),
-            self.card_widget(5),
-            self.card_widget(6),
-        ]
-        .columns(4)
-        .spacing(GRID_SPACING)
-        .height(grid::Sizing::AspectRatio(CARD_ASPECT));
+        let cards = container(responsive(|size| {
+            let expected_width =
+                (size.height - GRID_SPACING) * CARD_ASPECT * 2. + 3. * GRID_SPACING;
+            widget::grid![
+                self.card_widget(0),
+                self.card_widget(1),
+                self.card_widget(2),
+                self.card_widget(3),
+                self.card_widget(4),
+                self.card_widget(5),
+                self.card_widget(6),
+            ]
+            .columns(4)
+            .spacing(GRID_SPACING)
+            .width(size.width.min(expected_width))
+            .height(grid::Sizing::AspectRatio(CARD_ASPECT))
+        }))
+        .padding(BOARD_PADDING);
 
-        let cards = container(cards).padding(BOARD_PADDING);
         let menu = container(
             container(widget::column![
                 widget::text!("Remaining cards: {}", 63 - self.card_head),
@@ -102,9 +107,9 @@ impl SetApp {
         .center(Length::Fill);
 
         if self.finished {
-            cards.into()
-        } else {
             widget::stack![cards, menu].into()
+        } else {
+            cards.into()
         }
     }
 
@@ -148,7 +153,6 @@ impl SetApp {
         {
             match key.as_ref() {
                 keyboard::Key::Character("h") => self.print_solution(),
-
                 keyboard::Key::Character("c") => self.selection = 0,
                 keyboard::Key::Character("x") => {
                     self.selection = !self.selection & ((1 << 7) - 1);
@@ -160,7 +164,6 @@ impl SetApp {
                 {
                     self.toggle_card((num - 1) as usize);
                 }
-
                 _ => {}
             }
         }
