@@ -65,6 +65,7 @@ impl SetApp {
         match message {
             Message::ToggleCard(card) => self.toggle_card(card),
             Message::KeyboardEvent(event) => self.handle_keyboard_event(event),
+            Message::Restart => *self = Self::new(),
         }
     }
 
@@ -92,7 +93,7 @@ impl SetApp {
             container(widget::column![
                 widget::text!("Remaining cards: {}", 63 - self.card_head),
                 widget::text!("Time: {:.0?}", self.start_time.elapsed()),
-                widget::button("Try again"),
+                widget::button("Try again").on_press(Message::Restart),
             ])
             .style(|_theme| container::Style {
                 text_color: Some(Color::WHITE),
@@ -240,6 +241,7 @@ impl Default for SetApp {
 enum Message {
     ToggleCard(usize),
     KeyboardEvent(keyboard::Event),
+    Restart,
 }
 
 #[derive(Debug, Clone, Copy)]
