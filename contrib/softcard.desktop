@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Softcard
+Comment=Set game
+Exec=softcard
+Type=Application
+Categories=Game;
