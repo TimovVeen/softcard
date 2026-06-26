@@ -2,6 +2,7 @@ use iced::{
     Border, Color, Element, Length, Point, Rectangle, Renderer, Subscription, Theme,
     alignment::{Horizontal, Vertical},
     keyboard, mouse,
+    time::{self, Instant, milliseconds},
     widget::{
         self,
         canvas::{self, Path},
@@ -9,12 +10,10 @@ use iced::{
     },
 };
 use log::info;
-use web_time::Instant;
 
 const BOARD_PADDING: f32 = 20.;
 const GRID_SPACING: f32 = 20.;
 const CARD_ASPECT: f32 = 2. / 3.;
-const CARD_INNER_PADDING: f32 = 0.;
 const DOT_RADIUS_RATIO: f32 = 0.15;
 
 const CARD_COLORS: [Color; 6] = [
@@ -44,6 +43,7 @@ struct SetApp {
     card_head: usize,
     finished: bool,
     start_time: Instant,
+    current_time: Instant,
 }
 
 impl SetApp {
@@ -58,6 +58,7 @@ impl SetApp {
             card_head: 7,
             finished: false,
             start_time: Instant::now(),
+            current_time: Instant::now(),
         }
     }
 
@@ -66,6 +67,11 @@ impl SetApp {
             Message::ToggleCard(card) => self.toggle_card(card),
             Message::KeyboardEvent(event) => self.handle_keyboard_event(event),
             Message::Restart => *self = Self::new(),
+            Message::Tick(now) => {
+                if !self.finished {
+                    self.current_time = now
+                }
+            }
         }
     }
 
@@ -73,6 +79,28 @@ impl SetApp {
         let cards = container(responsive(|size| {
             let expected_width =
                 (size.height - GRID_SPACING) * CARD_ASPECT * 2. + 3. * GRID_SPACING;
+
+            let total_seconds = (self.current_time - self.start_time).as_secs();
+            let stats = container(
+                widget::column![
+                    widget::text!("Remaining cards: {}", 63 - self.card_head),
+                    widget::text!("Time: {:02}:{:02}", total_seconds / 60, total_seconds % 60),
+                    widget::button("Restart").on_press(Message::Restart),
+                ]
+                .spacing(5.)
+                .width(Length::Fill),
+            )
+            .padding(10.)
+            .style(move |_theme| container::Style {
+                background: Some(Color::WHITE.into()),
+                border: Border {
+                    color: Color::BLACK,
+                    width: 1.5,
+                    radius: 10.0.into(),
+                },
+                ..Default::default()
+            });
+
             widget::grid![
                 self.card_widget(0),
                 self.card_widget(1),
@@ -81,6 +109,7 @@ impl SetApp {
                 self.card_widget(4),
                 self.card_widget(5),
                 self.card_widget(6),
+                stats,
             ]
             .columns(4)
             .spacing(GRID_SPACING)
@@ -89,25 +118,30 @@ impl SetApp {
         }))
         .padding(BOARD_PADDING);
 
-        let menu = container(
-            container(widget::column![
-                widget::text!("Remaining cards: {}", 63 - self.card_head),
-                widget::text!("Time: {:.0?}", self.start_time.elapsed()),
-                widget::button("Try again").on_press(Message::Restart),
-            ])
-            .style(|_theme| container::Style {
-                text_color: Some(Color::WHITE),
-                background: Some(Color::BLACK.into()),
-                ..Default::default()
-            })
-            .padding(10.)
-            .center(Length::Shrink),
-        )
-        .align_x(Horizontal::Center)
-        .align_y(Vertical::Center)
-        .center(Length::Fill);
-
         if self.finished {
+            let final_time = (self.current_time - self.start_time).as_millis();
+            let millis = final_time % 1000;
+            let seconds = (final_time / 1000) % 60;
+            let minutes = final_time / 60000;
+
+            let menu = container(
+                container(widget::column![
+                    widget::text!("You won!"),
+                    widget::text!("Time: {:02}:{:02}:{:03}", minutes, seconds, millis),
+                    widget::button("Try again").on_press(Message::Restart),
+                ])
+                .style(|_theme| container::Style {
+                    text_color: Some(Color::WHITE),
+                    background: Some(Color::BLACK.into()),
+                    ..Default::default()
+                })
+                .padding(10.)
+                .center(Length::Shrink),
+            )
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center)
+            .center(Length::Fill);
+
             widget::stack![cards, menu].into()
         } else {
             cards.into()
@@ -123,7 +157,6 @@ impl SetApp {
             .width(Length::Fill)
             .height(Length::Fill),
         )
-        .padding(CARD_INNER_PADDING)
         .style(move |_theme| container::Style {
             background: Some(
                 if selected {
@@ -242,6 +275,7 @@ enum Message {
     ToggleCard(usize),
     KeyboardEvent(keyboard::Event),
     Restart,
+    Tick(Instant),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -280,10 +314,6 @@ impl<Message> canvas::Program<Message> for CardCanvas {
     }
 }
 
-fn subscription(_app: &SetApp) -> Subscription<Message> {
-    keyboard::listen().map(Message::KeyboardEvent)
-}
-
 fn main() -> iced::Result {
     #[cfg(not(target_family = "wasm"))]
     simple_logger::init_with_level(log::Level::Info).unwrap();
@@ -292,6 +322,11 @@ fn main() -> iced::Result {
 
     iced::application(SetApp::default, SetApp::update, SetApp::view)
         .title("Softcard")
-        .subscription(subscription)
+        .subscription(|_| {
+            Subscription::batch(vec![
+                time::every(milliseconds(100)).map(Message::Tick),
+                keyboard::listen().map(Message::KeyboardEvent),
+            ])
+        })
         .run()
 }
