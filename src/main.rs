@@ -1,7 +1,6 @@
 use iced::{
-    Border, Color, Element, Length, Point, Rectangle, Renderer, Subscription, Theme,
-    alignment::{Horizontal, Vertical},
-    keyboard, mouse,
+    Border, Color, Element, Length, Point, Rectangle, Renderer, Subscription, Theme, keyboard,
+    mouse,
     time::{self, Instant, milliseconds},
     widget::{
         self,
@@ -10,6 +9,9 @@ use iced::{
     },
 };
 use log::info;
+
+mod selection;
+use crate::selection::Selection;
 
 const BOARD_PADDING: f32 = 20.;
 const GRID_SPACING: f32 = 20.;
@@ -39,7 +41,7 @@ const CARDS: [u8; 63] = {
 struct SetApp {
     cards: [u8; 7],
     all_cards: [u8; 63],
-    selection: u8,
+    selection: Selection,
     card_head: usize,
     finished: bool,
     start_time: Instant,
@@ -54,7 +56,7 @@ impl SetApp {
         Self {
             cards: all_cards[..7].try_into().unwrap(),
             all_cards,
-            selection: 0,
+            selection: Selection::new(7),
             card_head: 7,
             finished: false,
             start_time: Instant::now(),
@@ -76,20 +78,37 @@ impl SetApp {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let cards = container(responsive(|size| {
+        container(responsive(|size| {
             let expected_width =
                 (size.height - GRID_SPACING) * CARD_ASPECT * 2. + 3. * GRID_SPACING;
 
-            let total_seconds = (self.current_time - self.start_time).as_secs();
-            let stats = container(
+            let buttons = widget::row![
+                widget::button("Restart")
+                    .on_press(Message::Restart)
+                    .width(Length::Fill),
+                widget::button("Menu").width(Length::Fill),
+            ]
+            .spacing(5.);
+
+            let final_time = (self.current_time - self.start_time).as_millis();
+            let millis = final_time % 1000;
+            let seconds = (final_time / 1000) % 60;
+            let minutes = final_time / 60000;
+            let stats = container(if !self.finished {
                 widget::column![
                     widget::text!("Remaining cards: {}", 63 - self.card_head),
-                    widget::text!("Time: {:02}:{:02}", total_seconds / 60, total_seconds % 60),
-                    widget::button("Restart").on_press(Message::Restart),
+                    widget::text!("Time: {:02}:{:02}", minutes, seconds),
+                    buttons,
                 ]
                 .spacing(5.)
-                .width(Length::Fill),
-            )
+            } else {
+                widget::column![
+                    widget::text!("Finished!"),
+                    widget::text!("Time: {:02}:{:02}:{:03}", minutes, seconds, millis),
+                    buttons,
+                ]
+                .spacing(5.)
+            })
             .padding(10.)
             .style(move |_theme| container::Style {
                 background: Some(Color::WHITE.into()),
@@ -116,43 +135,15 @@ impl SetApp {
             .width(size.width.min(expected_width))
             .height(grid::Sizing::AspectRatio(CARD_ASPECT))
         }))
-        .padding(BOARD_PADDING);
-
-        if self.finished {
-            let final_time = (self.current_time - self.start_time).as_millis();
-            let millis = final_time % 1000;
-            let seconds = (final_time / 1000) % 60;
-            let minutes = final_time / 60000;
-
-            let menu = container(
-                container(widget::column![
-                    widget::text!("You won!"),
-                    widget::text!("Time: {:02}:{:02}:{:03}", minutes, seconds, millis),
-                    widget::button("Try again").on_press(Message::Restart),
-                ])
-                .style(|_theme| container::Style {
-                    text_color: Some(Color::WHITE),
-                    background: Some(Color::BLACK.into()),
-                    ..Default::default()
-                })
-                .padding(10.)
-                .center(Length::Shrink),
-            )
-            .align_x(Horizontal::Center)
-            .align_y(Vertical::Center)
-            .center(Length::Fill);
-
-            widget::stack![cards, menu].into()
-        } else {
-            cards.into()
-        }
+        .padding(BOARD_PADDING)
+        .into()
     }
 
-    fn card_widget(&self, index: usize) -> Element<'_, Message> {
-        let selected = self.is_selected(index);
+    fn card_widget(&self, index: u8) -> Element<'_, Message> {
+        let selected = self.selection.is_selected(index);
         let card = container(
             canvas::Canvas::new(CardCanvas {
-                mask: self.cards[index],
+                mask: self.cards[index as usize],
             })
             .width(Length::Fill)
             .height(Length::Fill),
@@ -186,81 +177,55 @@ impl SetApp {
             && !repeat
         {
             match key.as_ref() {
-                keyboard::Key::Character("h") => self.print_solution(),
-                keyboard::Key::Character("c") => self.selection = 0,
+                keyboard::Key::Character("c") => self.selection.clear(),
                 keyboard::Key::Character("x") => {
-                    self.selection = !self.selection & ((1 << 7) - 1);
+                    self.selection.invert();
                     self.resolve_selection();
                 }
                 keyboard::Key::Character(ch)
                     if let Ok(num) = ch.parse::<u8>()
                         && (1..=7).contains(&num) =>
                 {
-                    self.toggle_card((num - 1) as usize);
+                    self.toggle_card(num - 1);
                 }
                 _ => {}
             }
         }
     }
 
-    fn toggle_card(&mut self, card: usize) {
-        if self.finished || card >= self.cards.len() {
+    fn toggle_card(&mut self, card: u8) {
+        if self.finished || card >= self.cards.len() as u8 {
             return;
         }
-
-        self.selection ^= 1 << card;
+        self.selection.toggle(card);
         self.resolve_selection();
     }
 
     fn resolve_selection(&mut self) {
-        if self.selection == 0 || self.xor_selected(self.selection) != 0 {
+        if self.selection.is_empty() || self.xor_selected() != 0 {
             return;
         }
 
         info!("You got a set!");
-        let mut sels = self.selection;
-        while sels != 0 {
+        for card in self.selection {
             if self.card_head >= self.all_cards.len() - 1 {
                 self.finished = true;
-                self.selection = 0;
+                self.selection.clear();
                 info!("You win!");
                 return;
             }
 
-            let index = sels.trailing_zeros() as usize;
-            self.cards[index] = self.all_cards[self.card_head];
+            self.cards[card as usize] = self.all_cards[self.card_head];
             self.card_head += 1;
-            sels &= sels - 1;
         }
-
-        self.selection = 0;
+        self.selection.clear();
     }
 
-    fn xor_selected(&self, selection: u8) -> u8 {
-        let mut sels = selection;
-        let mut res = 0;
-        while sels != 0 {
-            res ^= self.cards[sels.trailing_zeros() as usize];
-            sels &= sels - 1;
-        }
-        res
-    }
-
-    fn print_solution(&self) {
-        for selection in 1..0b10000000_u8 {
-            if selection.count_ones() < 3 {
-                continue;
-            }
-
-            if self.xor_selected(selection) == 0 {
-                info!("{selection:b}");
-                return;
-            }
-        }
-    }
-
-    fn is_selected(&self, index: usize) -> bool {
-        self.selection & (1 << index) != 0
+    fn xor_selected(&self) -> u8 {
+        self.selection
+            .into_iter()
+            .map(|i| self.cards[i as usize])
+            .fold(0, |acc, x| acc ^ x)
     }
 }
 
@@ -272,7 +237,7 @@ impl Default for SetApp {
 
 #[derive(Debug, Clone)]
 enum Message {
-    ToggleCard(usize),
+    ToggleCard(u8),
     KeyboardEvent(keyboard::Event),
     Restart,
     Tick(Instant),
