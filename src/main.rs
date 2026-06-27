@@ -1,11 +1,7 @@
 use iced::{
     Border, Color, Element, Length, Subscription, keyboard,
     time::{self, Instant, milliseconds},
-    widget::{
-        self,
-        canvas::{self},
-        container, grid, mouse_area, responsive,
-    },
+    widget::{self, container, grid, mouse_area, responsive},
 };
 use log::info;
 
@@ -131,35 +127,12 @@ impl SetApp {
 
     fn card_widget(&self, index: u8) -> Element<'_, Message> {
         let selected = self.selection.is_selected(index);
-        let card = container(
-            canvas::Canvas::new(ProjectiveCard {
-                mask: self.cards[index as usize],
-            })
-            .width(Length::Fill)
-            .height(Length::Fill),
-        )
-        .style(move |_theme| container::Style {
-            background: Some(
-                if selected {
-                    Color::from_rgb8(0x71, 0x77, 0x7F)
-                } else {
-                    Color::WHITE
-                }
-                .into(),
-            ),
-            border: Border {
-                color: Color::BLACK,
-                width: 1.5,
-                radius: 10.0.into(),
-            },
-            ..Default::default()
-        });
-
-        if self.finished {
-            card.into()
-        } else {
-            mouse_area(card).on_press(Message::ToggleCard(index)).into()
+        let card = ProjectiveCard {
+            mask: self.cards[index as usize],
         }
+        .view(selected);
+
+        mouse_area(card).on_press(Message::ToggleCard(index)).into()
     }
 
     fn handle_keyboard_event(&mut self, event: keyboard::Event) {

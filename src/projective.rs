@@ -1,7 +1,13 @@
 use iced::{
-    Color, Point, Rectangle, Renderer, Theme, mouse,
-    widget::canvas::{self, Path},
+    Border, Color, Element, Length, Point, Rectangle, Renderer, Theme, mouse,
+    widget::{
+        Container,
+        canvas::{self, Path},
+        container,
+    },
 };
+
+use crate::Message;
 
 const DOT_RADIUS_RATIO: f32 = 0.15;
 
@@ -17,6 +23,33 @@ const CARD_COLORS: [Color; 6] = [
 #[derive(Debug, Clone, Copy)]
 pub struct ProjectiveCard {
     pub mask: u8,
+}
+
+impl ProjectiveCard {
+    pub fn view<'a>(self, selected: bool) -> Element<'a, Message> {
+        container(
+            canvas::Canvas::new(self)
+                .width(Length::Fill)
+                .height(Length::Fill),
+        )
+        .style(move |_theme| container::Style {
+            background: Some(
+                if selected {
+                    Color::from_rgb8(0x71, 0x77, 0x7F)
+                } else {
+                    Color::WHITE
+                }
+                .into(),
+            ),
+            border: Border {
+                color: Color::BLACK,
+                width: 1.5,
+                radius: 10.0.into(),
+            },
+            ..Default::default()
+        })
+        .into()
+    }
 }
 
 impl<Message> canvas::Program<Message> for ProjectiveCard {
