@@ -1,31 +1,21 @@
 use iced::{
-    Border, Color, Element, Length, Point, Rectangle, Renderer, Subscription, Theme, keyboard,
-    mouse,
+    Border, Color, Element, Length, Subscription, keyboard,
     time::{self, Instant, milliseconds},
     widget::{
         self,
-        canvas::{self, Path},
+        canvas::{self},
         container, grid, mouse_area, responsive,
     },
 };
 use log::info;
 
+mod projective;
 mod selection;
-use crate::selection::Selection;
+use crate::{projective::ProjectiveCard, selection::Selection};
 
 const BOARD_PADDING: f32 = 20.;
 const GRID_SPACING: f32 = 20.;
 const CARD_ASPECT: f32 = 2. / 3.;
-const DOT_RADIUS_RATIO: f32 = 0.15;
-
-const CARD_COLORS: [Color; 6] = [
-    Color::from_rgb8(0xFF, 0x00, 0x00),
-    Color::from_rgb8(0xFF, 0xA5, 0x00),
-    Color::from_rgb8(0xFF, 0xD7, 0x00),
-    Color::from_rgb8(0x00, 0x80, 0x00),
-    Color::from_rgb8(0x00, 0x00, 0xFF),
-    Color::from_rgb8(0x80, 0x00, 0x80),
-];
 
 const CARDS: [u8; 63] = {
     let mut res = [0_u8; _];
@@ -142,7 +132,7 @@ impl SetApp {
     fn card_widget(&self, index: u8) -> Element<'_, Message> {
         let selected = self.selection.is_selected(index);
         let card = container(
-            canvas::Canvas::new(CardCanvas {
+            canvas::Canvas::new(ProjectiveCard {
                 mask: self.cards[index as usize],
             })
             .width(Length::Fill)
@@ -241,42 +231,6 @@ enum Message {
     KeyboardEvent(keyboard::Event),
     Restart,
     Tick(Instant),
-}
-
-#[derive(Debug, Clone, Copy)]
-struct CardCanvas {
-    mask: u8,
-}
-
-impl<Message> canvas::Program<Message> for CardCanvas {
-    type State = ();
-
-    fn draw(
-        &self,
-        _state: &Self::State,
-        renderer: &Renderer,
-        _theme: &Theme,
-        bounds: Rectangle,
-        _cursor: mouse::Cursor,
-    ) -> Vec<canvas::Geometry> {
-        let mut frame = canvas::Frame::new(renderer, bounds.size());
-
-        let radius = bounds.width * DOT_RADIUS_RATIO;
-        for (row, y) in [0.18333334, 0.48333335, 0.78333336].iter().enumerate() {
-            for (col, x) in [0.275, 0.725].iter().enumerate() {
-                let idx = row * 2 + col;
-                if self.mask & (1 << idx) == 0 {
-                    continue;
-                }
-
-                let center = Point::new(bounds.width * x, bounds.height * y);
-                let dot = Path::circle(center, radius);
-                frame.fill(&dot, CARD_COLORS[idx]);
-            }
-        }
-
-        vec![frame.into_geometry()]
-    }
 }
 
 fn main() -> iced::Result {
