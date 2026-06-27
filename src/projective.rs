@@ -1,13 +1,10 @@
 use iced::{
     Border, Color, Element, Length, Point, Rectangle, Renderer, Theme, mouse,
     widget::{
-        Container,
         canvas::{self, Path},
-        container,
+        container, mouse_area,
     },
 };
-
-use crate::Message;
 
 const DOT_RADIUS_RATIO: f32 = 0.15;
 
@@ -25,9 +22,18 @@ pub struct ProjectiveCard {
     pub mask: u8,
 }
 
+#[derive(Debug, Clone)]
+pub enum Message {
+    Toggle,
+}
+
 impl ProjectiveCard {
-    pub fn view<'a>(self, selected: bool) -> Element<'a, Message> {
-        container(
+    pub const fn new(mask: u8) -> Self {
+        Self { mask }
+    }
+
+    pub fn view(&self, selected: bool) -> Element<'_, Message> {
+        let card = container(
             canvas::Canvas::new(self)
                 .width(Length::Fill)
                 .height(Length::Fill),
@@ -47,8 +53,9 @@ impl ProjectiveCard {
                 radius: 10.0.into(),
             },
             ..Default::default()
-        })
-        .into()
+        });
+
+        mouse_area(card).on_press(Message::Toggle).into()
     }
 }
 

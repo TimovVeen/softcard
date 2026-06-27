@@ -1,7 +1,7 @@
 use iced::{
-    Border, Color, Element, Length, Subscription, keyboard,
+    Border, Color, Element, Function, Length, Subscription, keyboard,
     time::{self, Instant, milliseconds},
-    widget::{self, container, grid, mouse_area, responsive},
+    widget::{self, container, grid, responsive},
 };
 use log::info;
 
@@ -13,11 +13,11 @@ const BOARD_PADDING: f32 = 20.;
 const GRID_SPACING: f32 = 20.;
 const CARD_ASPECT: f32 = 2. / 3.;
 
-const CARDS: [u8; 63] = {
-    let mut res = [0_u8; _];
+const CARDS: [ProjectiveCard; 63] = {
+    let mut res = [ProjectiveCard::new(0); _];
     let mut i = 0;
     while i < res.len() {
-        res[i] = i as u8 + 1;
+        res[i] = ProjectiveCard::new(i as u8 + 1);
         i += 1;
     }
     res
@@ -25,8 +25,8 @@ const CARDS: [u8; 63] = {
 
 #[derive(Debug)]
 struct SetApp {
-    cards: [u8; 7],
-    all_cards: [u8; 63],
+    cards: [ProjectiveCard; 7],
+    all_cards: [ProjectiveCard; 63],
     selection: Selection,
     card_head: usize,
     finished: bool,
@@ -52,7 +52,7 @@ impl SetApp {
 
     fn update(&mut self, message: Message) {
         match message {
-            Message::ToggleCard(card) => self.toggle_card(card),
+            Message::Card(card, projective::Message::Toggle) => self.toggle_card(card),
             Message::KeyboardEvent(event) => self.handle_keyboard_event(event),
             Message::Restart => *self = Self::new(),
             Message::Tick(now) => {
@@ -76,25 +76,25 @@ impl SetApp {
             ]
             .spacing(5.);
 
-            let final_time = (self.current_time - self.start_time).as_millis();
-            let millis = final_time % 1000;
-            let seconds = (final_time / 1000) % 60;
-            let minutes = final_time / 60000;
-            let stats = container(if !self.finished {
-                widget::column![
-                    widget::text!("Remaining cards: {}", 63 - self.card_head),
-                    widget::text!("Time: {:02}:{:02}", minutes, seconds),
-                    buttons,
-                ]
-                .spacing(5.)
-            } else {
-                widget::column![
-                    widget::text!("Finished!"),
-                    widget::text!("Time: {:02}:{:02}:{:03}", minutes, seconds, millis),
-                    buttons,
-                ]
-                .spacing(5.)
-            })
+            let elapsed_time = (self.current_time - self.start_time).as_millis();
+            let millis = elapsed_time % 1000;
+            let seconds = (elapsed_time / 1000) % 60;
+            let minutes = elapsed_time / 60000;
+            let stats = container(
+                if !self.finished {
+                    widget::column![
+                        widget::text!("Remaining cards: {}", 63 - self.card_head),
+                        widget::text!("Time: {:02}:{:02}", minutes, seconds),
+                    ]
+                } else {
+                    widget::column![
+                        widget::text!("Finished!"),
+                        widget::text!("Time: {:02}:{:02}:{:03}", minutes, seconds, millis),
+                    ]
+                }
+                .push(buttons)
+                .spacing(5.),
+            )
             .padding(10.)
             .style(move |_theme| container::Style {
                 background: Some(Color::WHITE.into()),
@@ -106,16 +106,11 @@ impl SetApp {
                 ..Default::default()
             });
 
-            widget::grid![
-                self.card_widget(0),
-                self.card_widget(1),
-                self.card_widget(2),
-                self.card_widget(3),
-                self.card_widget(4),
-                self.card_widget(5),
-                self.card_widget(6),
-                stats,
-            ]
+            grid(self.cards.iter().enumerate().map(|(i, card)| {
+                card.view(self.selection.is_selected(i as u8))
+                    .map(Message::Card.with(i as u8))
+            }))
+            .push(stats)
             .columns(4)
             .spacing(GRID_SPACING)
             .width(size.width.min(expected_width))
@@ -123,16 +118,6 @@ impl SetApp {
         }))
         .padding(BOARD_PADDING)
         .into()
-    }
-
-    fn card_widget(&self, index: u8) -> Element<'_, Message> {
-        let selected = self.selection.is_selected(index);
-        let card = ProjectiveCard {
-            mask: self.cards[index as usize],
-        }
-        .view(selected);
-
-        mouse_area(card).on_press(Message::ToggleCard(index)).into()
     }
 
     fn handle_keyboard_event(&mut self, event: keyboard::Event) {
@@ -188,7 +173,7 @@ impl SetApp {
         self.selection
             .into_iter()
             .map(|i| self.cards[i as usize])
-            .fold(0, |acc, x| acc ^ x)
+            .fold(0, |acc, x| acc ^ x.mask)
     }
 }
 
@@ -200,7 +185,7 @@ impl Default for SetApp {
 
 #[derive(Debug, Clone)]
 enum Message {
-    ToggleCard(u8),
+    Card(u8, projective::Message),
     KeyboardEvent(keyboard::Event),
     Restart,
     Tick(Instant),
