@@ -175,6 +175,18 @@ impl SetApp {
             .map(|i| self.cards[i as usize])
             .fold(0, |acc, x| acc ^ x.mask)
     }
+
+    fn subscription(&self) -> Subscription<Message> {
+        let keyboard = keyboard::listen().map(Message::KeyboardEvent);
+        if self.finished {
+            keyboard
+        } else {
+            Subscription::batch(vec![
+                keyboard,
+                time::every(milliseconds(100)).map(Message::Tick),
+            ])
+        }
+    }
 }
 
 impl Default for SetApp {
@@ -199,11 +211,6 @@ fn main() -> iced::Result {
 
     iced::application(SetApp::default, SetApp::update, SetApp::view)
         .title("Softcard")
-        .subscription(|_| {
-            Subscription::batch(vec![
-                time::every(milliseconds(100)).map(Message::Tick),
-                keyboard::listen().map(Message::KeyboardEvent),
-            ])
-        })
+        .subscription(SetApp::subscription)
         .run()
 }
