@@ -204,10 +204,7 @@ enum Message {
 }
 
 fn main() -> iced::Result {
-    #[cfg(not(target_family = "wasm"))]
     simple_logger::init_with_level(log::Level::Info).unwrap();
-    #[cfg(target_family = "wasm")]
-    console_log::init_with_level(log::Level::Info).unwrap();
 
     iced::application(SetApp::default, SetApp::update, SetApp::view)
         .title("Softcard")
