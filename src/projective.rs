@@ -6,22 +6,9 @@ use iced::{
 use log::info;
 
 use crate::{
-    card::{self, ProjCard},
+    BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
+    card::{self, CardCanvas, ProjCard},
     selection::Selection,
-};
-
-const BOARD_PADDING: f32 = 20.;
-const GRID_SPACING: f32 = 20.;
-const CARD_ASPECT: f32 = 2. / 3.;
-
-const CARDS: [ProjCard; 63] = {
-    let mut res = [ProjCard::new(0); _];
-    let mut i = 0;
-    while i < res.len() {
-        res[i] = ProjCard::new(i as u8 + 1);
-        i += 1;
-    }
-    res
 };
 
 #[derive(Debug, Clone)]
@@ -46,7 +33,15 @@ pub struct ProjSet {
 
 impl ProjSet {
     pub fn new() -> Self {
-        let mut all_cards = CARDS;
+        let mut all_cards = {
+            let mut res = [ProjCard::default(); 63];
+            let mut i = 0;
+            while i < res.len() {
+                res[i] = ProjCard::new(i as u8 + 1);
+                i += 1;
+            }
+            res
+        };
         fastrand::shuffle(&mut all_cards);
 
         Self {
@@ -159,7 +154,7 @@ impl ProjSet {
     }
 
     fn resolve_selection(&mut self) {
-        if self.selection.is_empty() || self.xor_selected() != 0 {
+        if self.selection.is_empty() || !self.is_selected_set() {
             return;
         }
 
@@ -178,11 +173,12 @@ impl ProjSet {
         self.selection.clear();
     }
 
-    fn xor_selected(&self) -> u8 {
+    fn is_selected_set(&self) -> bool {
         self.selection
             .into_iter()
             .map(|i| self.cards[i as usize])
-            .fold(0, |acc, x| acc ^ x.mask)
+            .sum::<ProjCard>()
+            == ProjCard::default()
     }
 
     pub fn subscription(&self) -> Subscription<Message> {

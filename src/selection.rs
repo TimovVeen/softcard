@@ -28,6 +28,10 @@ impl Selection {
     pub fn is_selected(&self, index: u8) -> bool {
         self.mask & (1 << index) != 0
     }
+
+    pub fn card_count(&self) -> u8 {
+        self.mask.count_ones() as u8
+    }
 }
 
 impl Iterator for Selection {
