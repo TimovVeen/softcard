@@ -1,3 +1,5 @@
+use std::array::from_fn;
+
 use iced::{
     Border, Color, Element, Function, Length, Subscription, keyboard,
     time::{self, Instant, milliseconds},
@@ -7,7 +9,7 @@ use log::info;
 
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
-    card::{self, CardCanvas, ProjCard},
+    card::{self, CardCanvas, ProjCanvas, ProjCard},
     selection::Selection,
 };
 
@@ -20,9 +22,8 @@ pub enum Message {
     Tick(Instant),
 }
 
-#[derive(Debug, Clone)]
 pub struct ProjSet {
-    cards: [ProjCard; 7],
+    cards: [ProjCanvas; 7],
     all_cards: [ProjCard; 63],
     selection: Selection,
     card_head: usize,
@@ -45,7 +46,7 @@ impl ProjSet {
         fastrand::shuffle(&mut all_cards);
 
         Self {
-            cards: all_cards[..7].try_into().unwrap(),
+            cards: from_fn(|i| ProjCanvas::new(all_cards[i])),
             all_cards,
             selection: Selection::new(7),
             card_head: 7,
@@ -167,7 +168,7 @@ impl ProjSet {
                 return;
             }
 
-            self.cards[card as usize] = self.all_cards[self.card_head];
+            self.cards[card as usize].set_card(self.all_cards[self.card_head]);
             self.card_head += 1;
         }
         self.selection.clear();
@@ -176,7 +177,7 @@ impl ProjSet {
     fn is_selected_set(&self) -> bool {
         self.selection
             .into_iter()
-            .map(|i| self.cards[i as usize])
+            .map(|i| self.cards[i as usize].get_card())
             .sum::<ProjCard>()
             == ProjCard::default()
     }

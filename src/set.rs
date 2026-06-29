@@ -1,3 +1,5 @@
+use std::array::from_fn;
+
 use iced::{
     Border, Color, Element, Function, Length, Subscription,
     time::{self, Instant, milliseconds},
@@ -7,7 +9,7 @@ use log::info;
 
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
-    card::{self, CardCanvas, ClassicCard},
+    card::{self, CardCanvas, ClassicCanvas, ClassicCard},
     selection::Selection,
 };
 
@@ -19,9 +21,8 @@ pub enum Message {
     Tick(Instant),
 }
 
-#[derive(Debug, Clone)]
 pub struct ClassicSet {
-    cards: [ClassicCard; 12],
+    cards: [ClassicCanvas; 12],
     all_cards: [ClassicCard; 81],
     selection: Selection,
     card_head: usize,
@@ -51,7 +52,7 @@ impl ClassicSet {
         fastrand::shuffle(&mut all_cards);
 
         Self {
-            cards: all_cards[..12].try_into().unwrap(),
+            cards: from_fn(|i| ClassicCanvas::new(all_cards[i])),
             all_cards,
             selection: Selection::new(12),
             card_head: 12,
@@ -150,7 +151,7 @@ impl ClassicSet {
                     return;
                 }
 
-                self.cards[card as usize] = self.all_cards[self.card_head];
+                self.cards[card as usize].set_card(self.all_cards[self.card_head]);
                 self.card_head += 1;
             }
         }
@@ -161,7 +162,7 @@ impl ClassicSet {
     fn is_selected_set(&self) -> bool {
         self.selection
             .into_iter()
-            .map(|i| self.cards[i as usize])
+            .map(|i| self.cards[i as usize].get_card())
             .sum::<ClassicCard>()
             == ClassicCard::default()
     }
