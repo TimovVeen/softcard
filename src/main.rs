@@ -1,5 +1,5 @@
 use iced::{
-    Element, Subscription,
+    Element, Length, Subscription,
     widget::{self},
 };
 
@@ -64,10 +64,16 @@ impl App {
     fn view(&self) -> Element<'_, Message> {
         match &self.state {
             State::Menu => widget::column![
-                widget::button("Projective Set").on_press(Message::ChangeScreen(Screen::ProjSet)),
-                widget::button("Classic Set").on_press(Message::ChangeScreen(Screen::ClassicSet)),
+                widget::text!["Select Game:"],
+                widget::button("Projective Set")
+                    .on_press(Message::ChangeScreen(Screen::ProjSet))
+                    .width(Length::Fixed(160.)),
+                widget::button("Classic Set")
+                    .on_press(Message::ChangeScreen(Screen::ClassicSet))
+                    .width(Length::Fixed(160.)),
             ]
             .spacing(5.)
+            .padding(20.)
             .into(),
             State::ProjSet(projset) => projset.view().map(Message::ProjSet),
             State::ClassicSet(classicset) => classicset.view().map(Message::ClassicSet),

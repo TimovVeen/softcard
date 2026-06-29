@@ -82,7 +82,8 @@ impl ClassicSet {
             widget::text!("Remaining cards: {}", 81 - self.card_head),
             widget::text!("Time: {:02}:{:02}", minutes, seconds),
         ]
-        .spacing(5.);
+        .spacing(5.)
+        .padding(5.);
 
         let grid = container(responsive(|size| {
             let expected_width =
