@@ -1,5 +1,3 @@
-use std::array::from_fn;
-
 use iced::{
     Element, Function, Subscription,
     time::{self, Instant, milliseconds},
@@ -22,7 +20,7 @@ pub enum Message {
 }
 
 pub struct ClassicSet {
-    cards: [CardCanvas<ClassicCard>; 12],
+    cards: Vec<CardCanvas<ClassicCard>>,
     all_cards: [ClassicCard; 81],
     selection: Selection,
     card_head: usize,
@@ -51,11 +49,29 @@ impl ClassicSet {
         };
         fastrand::shuffle(&mut all_cards);
 
+        let mut initial_count = 12;
+        let mut cards: Vec<_> = all_cards
+            .iter()
+            .take(initial_count)
+            .map(CardCanvas::new)
+            .collect();
+        while !check_if_has_set(&cards) {
+            info!("no set");
+            initial_count += 3;
+            cards = all_cards
+                .iter()
+                .take(initial_count)
+                .map(CardCanvas::new)
+                .collect();
+        }
+
+        fastrand::shuffle(&mut cards);
+
         Self {
-            cards: from_fn(|i| CardCanvas::new(all_cards[i])),
+            cards,
             all_cards,
-            selection: Selection::new(12),
-            card_head: 12,
+            selection: Selection::new(initial_count as u8),
+            card_head: initial_count,
             finished: false,
             start_time: Instant::now(),
             current_time: Instant::now(),
@@ -86,14 +102,16 @@ impl ClassicSet {
         .padding(5.);
 
         let grid = container(responsive(|size| {
+            let columns = self.cards.len() / 3;
             let expected_width =
-                (size.height - GRID_SPACING * 2.) / 3. * CARD_ASPECT * 4. + 3. * GRID_SPACING;
+                (size.height - GRID_SPACING * 2.) / 3. * CARD_ASPECT * columns as f32
+                    + (columns - 1) as f32 * GRID_SPACING;
 
             grid(self.cards.iter().enumerate().map(|(i, card)| {
                 card.view(self.selection.is_selected(i as u8))
                     .map(Message::Card.with(i as u8))
             }))
-            .columns(4)
+            .columns(columns)
             .spacing(GRID_SPACING)
             .width(size.width.min(expected_width))
             .height(grid::Sizing::AspectRatio(CARD_ASPECT))
@@ -114,18 +132,32 @@ impl ClassicSet {
     }
 
     fn resolve_selection(&mut self) {
-        if !self.selection.is_empty() && self.is_selected_set() {
+        if self.is_selected_set() {
             info!("You got a set!");
-            for card in self.selection {
-                if self.card_head >= self.all_cards.len() {
-                    self.finished = true;
-                    self.selection.clear();
-                    info!("You win!");
-                    return;
+            if self.cards.len() == 12 && self.card_head < self.all_cards.len() {
+                for card_idx in self.selection {
+                    self.cards[card_idx as usize].set_card(self.all_cards[self.card_head]);
+                    self.card_head += 1;
                 }
+            } else {
+                for &card_idx in self.selection.into_iter().collect::<Vec<_>>().iter().rev() {
+                    self.cards.remove(card_idx as usize);
+                }
+            }
 
-                self.cards[card as usize].set_card(self.all_cards[self.card_head]);
-                self.card_head += 1;
+            while !check_if_has_set(&self.cards) && self.card_head < self.all_cards.len() {
+                self.cards
+                    .push(CardCanvas::new(&self.all_cards[self.card_head]));
+                self.cards
+                    .push(CardCanvas::new(&self.all_cards[self.card_head + 1]));
+                self.cards
+                    .push(CardCanvas::new(&self.all_cards[self.card_head + 2]));
+                self.card_head += 3;
+            }
+
+            if !check_if_has_set(&self.cards) {
+                self.finished = true;
+                info!("You win!");
             }
         }
 
@@ -147,6 +179,22 @@ impl ClassicSet {
             Subscription::none()
         }
     }
+}
+
+fn check_if_has_set(cards: &[CardCanvas<ClassicCard>]) -> bool {
+    let len = cards.len();
+    for i in 0..len {
+        for j in (i + 1)..len {
+            for k in (j + 1)..len {
+                if cards[i].get_card() + cards[j].get_card() + cards[k].get_card()
+                    == ClassicCard::default()
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 impl Default for ClassicSet {

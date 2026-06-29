@@ -46,7 +46,7 @@ impl ProjSet {
         fastrand::shuffle(&mut all_cards);
 
         Self {
-            cards: from_fn(|i| CardCanvas::new(all_cards[i])),
+            cards: from_fn(|i| CardCanvas::new(&all_cards[i])),
             all_cards,
             selection: Selection::new(7),
             card_head: 7,

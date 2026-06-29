@@ -92,9 +92,9 @@ pub struct CardCanvas<Card: CardDraw + Clone + Copy> {
 }
 
 impl<Card: CardDraw + Clone + Copy> CardCanvas<Card> {
-    pub fn new(card: Card) -> Self {
+    pub fn new(card: &Card) -> Self {
         Self {
-            card,
+            card: *card,
             cache: Cache::new(),
         }
     }
