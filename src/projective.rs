@@ -9,7 +9,7 @@ use log::info;
 
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
-    card::{self, CardCanvas, ProjCanvas, ProjCard},
+    card::{self, CardCanvas, ProjCard},
     selection::Selection,
 };
 
@@ -23,7 +23,7 @@ pub enum Message {
 }
 
 pub struct ProjSet {
-    cards: [ProjCanvas; 7],
+    cards: [CardCanvas<ProjCard>; 7],
     all_cards: [ProjCard; 63],
     selection: Selection,
     card_head: usize,
@@ -46,7 +46,7 @@ impl ProjSet {
         fastrand::shuffle(&mut all_cards);
 
         Self {
-            cards: from_fn(|i| ProjCanvas::new(all_cards[i])),
+            cards: from_fn(|i| CardCanvas::new(all_cards[i])),
             all_cards,
             selection: Selection::new(7),
             card_head: 7,

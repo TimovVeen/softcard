@@ -57,61 +57,6 @@ impl ProjCard {
     }
 }
 
-#[derive(Default)]
-pub struct ProjCanvas {
-    card: ProjCard,
-    cache: Cache,
-}
-
-impl ProjCanvas {
-    pub fn new(card: ProjCard) -> Self {
-        Self {
-            card,
-            cache: Cache::new(),
-        }
-    }
-
-    pub fn set_card(&mut self, card: ProjCard) {
-        self.card = card;
-        self.cache.clear();
-    }
-
-    pub fn get_card(&self) -> ProjCard {
-        self.card
-    }
-}
-
-impl<Message> canvas::Program<Message> for ProjCanvas {
-    type State = ();
-
-    fn draw(
-        &self,
-        _state: &Self::State,
-        renderer: &Renderer,
-        _theme: &Theme,
-        bounds: Rectangle,
-        _cursor: mouse::Cursor,
-    ) -> Vec<canvas::Geometry> {
-        let card = self.cache.draw(renderer, bounds.size(), |frame| {
-            let radius = bounds.width * DOT_RADIUS_RATIO;
-            for (row, y) in [0.18333334, 0.48333335, 0.78333336].iter().enumerate() {
-                for (col, x) in [0.275, 0.725].iter().enumerate() {
-                    let idx = row * 2 + col;
-                    if self.card.mask & (1 << idx) == 0 {
-                        continue;
-                    }
-
-                    let center = Point::new(bounds.width * x, bounds.height * y);
-                    let dot = Path::circle(center, radius);
-                    frame.fill(&dot, CARD_COLORS[idx]);
-                }
-            }
-        });
-
-        vec![card]
-    }
-}
-
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct ClassicCard {
     pub mask: [u8; 4],
@@ -120,30 +65,6 @@ pub struct ClassicCard {
 impl ClassicCard {
     pub fn new(mask: [u8; 4]) -> Self {
         Self { mask }
-    }
-}
-
-#[derive(Default)]
-pub struct ClassicCanvas {
-    card: ClassicCard,
-    cache: Cache,
-}
-
-impl ClassicCanvas {
-    pub fn new(card: ClassicCard) -> Self {
-        Self {
-            card,
-            cache: Cache::new(),
-        }
-    }
-
-    pub fn set_card(&mut self, card: ClassicCard) {
-        self.card = card;
-        self.cache.clear();
-    }
-
-    pub fn get_card(&self) -> ClassicCard {
-        self.card
     }
 }
 
@@ -165,7 +86,56 @@ impl Sum for ClassicCard {
     }
 }
 
-impl<Message> canvas::Program<Message> for ClassicCanvas {
+pub struct CardCanvas<Card: CardDraw + Clone + Copy> {
+    card: Card,
+    cache: Cache,
+}
+
+impl<Card: CardDraw + Clone + Copy> CardCanvas<Card> {
+    pub fn new(card: Card) -> Self {
+        Self {
+            card,
+            cache: Cache::new(),
+        }
+    }
+
+    pub fn set_card(&mut self, card: Card) {
+        self.card = card;
+        self.cache.clear();
+    }
+
+    pub fn get_card(&self) -> Card {
+        self.card
+    }
+
+    pub fn view(&self, selected: bool) -> Element<'_, Message> {
+        let card = container(
+            canvas::Canvas::new(self)
+                .width(Length::Fill)
+                .height(Length::Fill),
+        )
+        .style(move |_theme| container::Style {
+            background: Some(
+                if selected {
+                    Color::from_rgb8(0x71, 0x77, 0x7F)
+                } else {
+                    Color::WHITE
+                }
+                .into(),
+            ),
+            border: Border {
+                color: Color::BLACK,
+                width: 1.5,
+                radius: 10.0.into(),
+            },
+            ..Default::default()
+        });
+
+        mouse_area(card).on_press(Message::Toggle).into()
+    }
+}
+
+impl<Message, Card: CardDraw + Clone + Copy> canvas::Program<Message> for CardCanvas<Card> {
     type State = ();
 
     fn draw(
@@ -176,22 +146,54 @@ impl<Message> canvas::Program<Message> for ClassicCanvas {
         bounds: Rectangle,
         _cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
-        let card = self.cache.draw(renderer, bounds.size(), |frame| {
-            let color = match self.card.mask[0] {
+        let card = self
+            .cache
+            .draw(renderer, bounds.size(), |frame| self.card.draw(frame));
+
+        vec![card]
+    }
+}
+
+pub trait CardDraw {
+    fn draw(&self, frame: &mut canvas::Frame<Renderer>);
+}
+
+impl CardDraw for ProjCard {
+    fn draw(&self, frame: &mut canvas::Frame<Renderer>) {
+        let radius = frame.width() * DOT_RADIUS_RATIO;
+        for (row, y) in [0.18333334, 0.48333335, 0.78333336].iter().enumerate() {
+            for (col, x) in [0.275, 0.725].iter().enumerate() {
+                let idx = row * 2 + col;
+                if self.mask & (1 << idx) == 0 {
+                    continue;
+                }
+
+                let center = Point::new(frame.width() * x, frame.height() * y);
+                let dot = Path::circle(center, radius);
+                frame.fill(&dot, CARD_COLORS[idx]);
+            }
+        }
+    }
+}
+
+impl CardDraw for ClassicCard {
+    fn draw(&self, frame: &mut canvas::Frame<Renderer>) {
+        {
+            let color = match self.mask[0] {
                 0 => Color::from_rgb8(0xFF, 0x00, 0x00),
                 1 => Color::from_rgb8(0x00, 0xB5, 0x00),
                 2 => Color::from_rgb8(0xEF, 0x00, 0xDF),
                 _ => panic!(),
             };
 
-            let ypositions: &[f32] = match self.card.mask[1] {
+            let ypositions: &[f32] = match self.mask[1] {
                 0 => &[0.5],
                 1 => &[0.35, 0.65],
                 2 => &[0.2, 0.5, 0.8],
                 _ => panic!(),
             };
 
-            let shape = match self.card.mask[2] {
+            let shape = match self.mask[2] {
                 0 => {
                     Path::rounded_rectangle(Point::ORIGIN, Size::new(200., 100.), Radius::new(50.))
                 }
@@ -244,21 +246,21 @@ impl<Message> canvas::Program<Message> for ClassicCanvas {
             };
 
             let basetransform = Transform2D::translation(-100., -50.)
-                .then_scale(bounds.width / 300., bounds.width / 300.);
+                .then_scale(frame.width() / 300., frame.width() / 300.);
             for ypos in ypositions {
                 let transformation = basetransform
-                    .then_translate(Vector2D::new(bounds.width / 2., bounds.height * ypos));
+                    .then_translate(Vector2D::new(frame.width() / 2., frame.height() * ypos));
                 let transformed = shape.transform(&transformation);
-                if self.card.mask[3] == 2 {
+                if self.mask[3] == 2 {
                     frame.fill(&transformed, color);
-                } else if self.card.mask[3] == 1 {
+                } else if self.mask[3] == 1 {
                     frame.fill(
                         &transformed,
                         canvas::Fill {
                             style: canvas::Style::Gradient(canvas::Gradient::Linear(
                                 canvas::gradient::Linear::new(
                                     Point::new(0., 0.),
-                                    Point::new(bounds.width, 0.),
+                                    Point::new(frame.width(), 0.),
                                 )
                                 .add_stop(0.2, Color::from_rgb8(0xFF, 0xFF, 0xFF))
                                 .add_stop(1., color),
@@ -276,40 +278,6 @@ impl<Message> canvas::Program<Message> for ClassicCanvas {
                     },
                 );
             }
-        });
-
-        vec![card]
-    }
-}
-
-pub trait CardCanvas {
-    fn view(&self, selected: bool) -> Element<'_, Message>;
-}
-
-impl<P: canvas::Program<Message>> CardCanvas for P {
-    fn view(&self, selected: bool) -> Element<'_, Message> {
-        let card = container(
-            canvas::Canvas::new(self)
-                .width(Length::Fill)
-                .height(Length::Fill),
-        )
-        .style(move |_theme| container::Style {
-            background: Some(
-                if selected {
-                    Color::from_rgb8(0x71, 0x77, 0x7F)
-                } else {
-                    Color::WHITE
-                }
-                .into(),
-            ),
-            border: Border {
-                color: Color::BLACK,
-                width: 1.5,
-                radius: 10.0.into(),
-            },
-            ..Default::default()
-        });
-
-        mouse_area(card).on_press(Message::Toggle).into()
+        }
     }
 }

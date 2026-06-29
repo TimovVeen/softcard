@@ -9,7 +9,7 @@ use log::info;
 
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
-    card::{self, CardCanvas, ClassicCanvas, ClassicCard},
+    card::{self, CardCanvas, ClassicCard},
     selection::Selection,
 };
 
@@ -22,7 +22,7 @@ pub enum Message {
 }
 
 pub struct ClassicSet {
-    cards: [ClassicCanvas; 12],
+    cards: [CardCanvas<ClassicCard>; 12],
     all_cards: [ClassicCard; 81],
     selection: Selection,
     card_head: usize,
@@ -52,7 +52,7 @@ impl ClassicSet {
         fastrand::shuffle(&mut all_cards);
 
         Self {
-            cards: from_fn(|i| ClassicCanvas::new(all_cards[i])),
+            cards: from_fn(|i| CardCanvas::new(all_cards[i])),
             all_cards,
             selection: Selection::new(12),
             card_head: 12,
