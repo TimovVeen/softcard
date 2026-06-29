@@ -1,7 +1,7 @@
 use std::array::from_fn;
 
 use iced::{
-    Border, Color, Element, Function, Length, Subscription,
+    Element, Function, Subscription,
     time::{self, Instant, milliseconds},
     widget::{self, container, grid, responsive},
 };
@@ -72,62 +72,34 @@ impl ClassicSet {
     }
 
     pub fn view(&self) -> Element<'_, Message> {
-        container(responsive(|size| {
+        let elapsed_time = (self.current_time - self.start_time).as_millis();
+        let millis = elapsed_time % 1000;
+        let seconds = (elapsed_time / 1000) % 60;
+        let minutes = elapsed_time / 60000;
+        let bar = widget::row![
+            widget::button("Restart").on_press(Message::Restart),
+            widget::button("Menu").on_press(Message::Exit),
+            widget::text!("Remaining cards: {}", 81 - self.card_head),
+            widget::text!("Time: {:02}:{:02}", minutes, seconds),
+        ]
+        .spacing(5.);
+
+        let grid = container(responsive(|size| {
             let expected_width =
                 (size.height - GRID_SPACING * 2.) / 3. * CARD_ASPECT * 4. + 3. * GRID_SPACING;
-
-            // let buttons = widget::row![
-            //     widget::button("Restart")
-            //         .on_press(Message::Restart)
-            //         .width(Length::Fill),
-            //     widget::button("Menu")
-            //         .on_press(Message::Exit)
-            //         .width(Length::Fill),
-            // ]
-            // .spacing(5.);
-
-            // let elapsed_time = (self.current_time - self.start_time).as_millis();
-            // let millis = elapsed_time % 1000;
-            // let seconds = (elapsed_time / 1000) % 60;
-            // let minutes = elapsed_time / 60000;
-            // let stats = container(
-            //     if !self.finished {
-            //         widget::column![
-            //             widget::text!("Remaining cards: {}", 63 - self.card_head),
-            //             widget::text!("Time: {:02}:{:02}", minutes, seconds),
-            //         ]
-            //     } else {
-            //         widget::column![
-            //             widget::text!("Finished!"),
-            //             widget::text!("Time: {:02}:{:02}:{:03}", minutes, seconds, millis),
-            //         ]
-            //     }
-            //     .push(buttons)
-            //     .spacing(5.),
-            // )
-            // .padding(10.)
-            // .style(move |_theme| container::Style {
-            //     background: Some(Color::WHITE.into()),
-            //     border: Border {
-            //         color: Color::BLACK,
-            //         width: 1.5,
-            //         radius: 10.0.into(),
-            //     },
-            //     ..Default::default()
-            // });
 
             grid(self.cards.iter().enumerate().map(|(i, card)| {
                 card.view(self.selection.is_selected(i as u8))
                     .map(Message::Card.with(i as u8))
             }))
-            // .push(stats)
             .columns(4)
             .spacing(GRID_SPACING)
             .width(size.width.min(expected_width))
             .height(grid::Sizing::AspectRatio(CARD_ASPECT))
         }))
-        .padding(BOARD_PADDING)
-        .into()
+        .padding(BOARD_PADDING);
+
+        widget::column![bar, grid].into()
     }
 
     fn toggle_card(&mut self, card: u8) {
