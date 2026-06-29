@@ -154,6 +154,7 @@ impl ClassicSet {
                     .push(CardCanvas::new(&self.all_cards[self.card_head + 2]));
                 self.card_head += 3;
             }
+            self.selection.size = self.cards.len() as u8;
 
             if !check_if_has_set(&self.cards) {
                 self.finished = true;

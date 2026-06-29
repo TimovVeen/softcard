@@ -182,7 +182,7 @@ impl CardDraw for ClassicCard {
             let color = match self.mask[0] {
                 0 => Color::from_rgb8(0xFF, 0x00, 0x00),
                 1 => Color::from_rgb8(0x00, 0xB5, 0x00),
-                2 => Color::from_rgb8(0xEF, 0x00, 0xDF),
+                2 => Color::from_rgb8(0x59, 0x26, 0x93),
                 _ => panic!(),
             };
 
@@ -262,7 +262,7 @@ impl CardDraw for ClassicCard {
                                     Point::new(0., 0.),
                                     Point::new(frame.width(), 0.),
                                 )
-                                .add_stop(0.2, Color::from_rgb8(0xFF, 0xFF, 0xFF))
+                                .add_stop(0.4, Color::from_rgb8(0xFF, 0xFF, 0xFF))
                                 .add_stop(1., color),
                             )),
                             ..Default::default()
@@ -273,7 +273,7 @@ impl CardDraw for ClassicCard {
                     &transformed,
                     Stroke {
                         style: canvas::Style::Solid(color),
-                        width: 5.,
+                        width: frame.width() / 60.,
                         ..Stroke::default()
                     },
                 );

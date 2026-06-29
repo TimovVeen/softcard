@@ -1,7 +1,7 @@
 #[derive(Clone, Copy, Debug)]
 pub struct Selection {
     mask: u32,
-    size: u8,
+    pub size: u8,
 }
 
 impl Selection {
