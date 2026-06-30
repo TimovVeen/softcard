@@ -3,7 +3,7 @@ use std::{iter::Sum, ops::Add};
 use iced::{
     Border, Color, Element, Length, Point, Rectangle, Renderer, Size, Theme,
     border::Radius,
-    mouse,
+    color, mouse,
     widget::{
         canvas::{
             self, Cache, Path, Stroke,
@@ -19,12 +19,12 @@ use iced::{
 const DOT_RADIUS_RATIO: f32 = 0.15;
 
 const CARD_COLORS: [Color; 6] = [
-    Color::from_rgb8(0xFF, 0x00, 0x00),
-    Color::from_rgb8(0xFF, 0xA5, 0x00),
-    Color::from_rgb8(0xFF, 0xD7, 0x00),
-    Color::from_rgb8(0x00, 0x80, 0x00),
-    Color::from_rgb8(0x00, 0x00, 0xFF),
-    Color::from_rgb8(0x80, 0x00, 0x80),
+    color!(0xFF0000),
+    color!(0xFFA500),
+    color!(0xFFD700),
+    color!(0x008000),
+    color!(0x0000FF),
+    color!(0x800080),
 ];
 
 #[derive(Debug, Clone)]
@@ -117,7 +117,7 @@ impl<Card: CardDraw + Clone + Copy> CardCanvas<Card> {
         .style(move |_theme| container::Style {
             background: Some(
                 if selected {
-                    Color::from_rgb8(0x71, 0x77, 0x7F)
+                    color!(0x71777F)
                 } else {
                     Color::WHITE
                 }
@@ -180,9 +180,9 @@ impl CardDraw for ClassicCard {
     fn draw(&self, frame: &mut canvas::Frame<Renderer>) {
         {
             let color = match self.mask[0] {
-                0 => Color::from_rgb8(0xFF, 0x00, 0x00),
-                1 => Color::from_rgb8(0x00, 0xB5, 0x00),
-                2 => Color::from_rgb8(0x59, 0x26, 0x93),
+                0 => color!(0xFF0000),
+                1 => color!(0x00B500),
+                2 => color!(0x592693),
                 _ => panic!(),
             };
 
@@ -262,7 +262,7 @@ impl CardDraw for ClassicCard {
                                     Point::new(0., 0.),
                                     Point::new(frame.width(), 0.),
                                 )
-                                .add_stop(0.4, Color::from_rgb8(0xFF, 0xFF, 0xFF))
+                                .add_stop(0.4, Color::WHITE)
                                 .add_stop(1., color),
                             )),
                             ..Default::default()
