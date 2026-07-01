@@ -174,10 +174,10 @@ impl ClassicSet {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-        if !self.finished {
-            time::every(milliseconds(100)).map(Message::Tick)
-        } else {
+        if self.finished {
             Subscription::none()
+        } else {
+            time::every(milliseconds(100)).map(Message::Tick)
         }
     }
 }

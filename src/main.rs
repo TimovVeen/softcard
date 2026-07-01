@@ -44,18 +44,18 @@ impl App {
     fn update(&mut self, message: Message) {
         match message {
             Message::ChangeScreen(Screen::ProjSet) => {
-                self.state = State::ProjSet(ProjSet::default())
+                self.state = State::ProjSet(ProjSet::default());
             }
             Message::ChangeScreen(Screen::ClassicSet) => {
-                self.state = State::ClassicSet(ClassicSet::default())
+                self.state = State::ClassicSet(ClassicSet::default());
             }
             Message::ProjSet(projective::Message::Exit)
             | Message::ClassicSet(set::Message::Exit) => self.state = State::Menu,
             Message::ProjSet(message) if let State::ProjSet(projset) = &mut self.state => {
-                projset.update(message)
+                projset.update(message);
             }
             Message::ClassicSet(message) if let State::ClassicSet(classicset) = &mut self.state => {
-                classicset.update(message)
+                classicset.update(message);
             }
             _ => (),
         }

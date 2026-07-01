@@ -86,15 +86,15 @@ impl ProjSet {
             let seconds = (elapsed_time / 1000) % 60;
             let minutes = elapsed_time / 60000;
             let stats = container(
-                if !self.finished {
-                    widget::column![
-                        widget::text!("Remaining cards: {}", 63 - self.card_head),
-                        widget::text!("Time: {:02}:{:02}", minutes, seconds),
-                    ]
-                } else {
+                if self.finished {
                     widget::column![
                         widget::text!("Finished!"),
                         widget::text!("Time: {:02}:{:02}:{:03}", minutes, seconds, millis),
+                    ]
+                } else {
+                    widget::column![
+                        widget::text!("Remaining cards: {}", 63 - self.card_head),
+                        widget::text!("Time: {:02}:{:02}", minutes, seconds),
                     ]
                 }
                 .push(buttons)

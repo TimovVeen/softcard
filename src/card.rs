@@ -32,13 +32,13 @@ pub enum Message {
     Toggle,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct ProjCard {
     pub mask: u8,
 }
 
 impl Add for ProjCard {
-    type Output = ProjCard;
+    type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
         Self::Output::new(self.mask ^ rhs.mask)
@@ -57,7 +57,7 @@ impl ProjCard {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct ClassicCard {
     pub mask: [u8; 4],
 }
@@ -69,7 +69,7 @@ impl ClassicCard {
 }
 
 impl Add for ClassicCard {
-    type Output = ClassicCard;
+    type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
         let mut res = [0; 4];
