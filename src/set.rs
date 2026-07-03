@@ -111,7 +111,7 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
     }
 
     fn resolve_selection(&mut self) {
-        if self.is_selected_set() {
+        if self.selection.check_set(&self.cards) {
             info!("You got a set!");
             if self.cards.len() == 12 && self.card_head < 81 {
                 self.selection
@@ -140,14 +140,6 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
         }
 
         self.selection.clear();
-    }
-
-    fn is_selected_set(&self) -> bool {
-        self.selection
-            .into_iter()
-            .map(|i| self.cards[i as usize].get_card())
-            .sum::<ClassicCard>()
-            == ClassicCard::default()
     }
 
     pub fn subscription(&self) -> Subscription<Message> {

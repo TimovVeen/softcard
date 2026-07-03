@@ -1,3 +1,7 @@
+use std::iter::Sum;
+
+use crate::card::{CardCanvas, CardDraw};
+
 #[derive(Clone, Copy, Debug)]
 pub struct Selection {
     mask: u32,
@@ -27,6 +31,16 @@ impl Selection {
 
     pub fn is_selected(&self, index: u8) -> bool {
         self.mask & (1 << index) != 0
+    }
+
+    pub fn check_set<Card: CardDraw + Copy + Default + Sum + Eq>(
+        &self,
+        cards: &[CardCanvas<Card>],
+    ) -> bool {
+        self.into_iter()
+            .map(|i| cards[i as usize].get_card())
+            .sum::<Card>()
+            == Card::default()
     }
 }
 

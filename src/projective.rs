@@ -146,7 +146,7 @@ impl<Deck: Iterator<Item = ProjCard> + Default> ProjSet<Deck> {
     }
 
     fn resolve_selection(&mut self) {
-        if self.selection.is_empty() || !self.is_selected_set() {
+        if self.selection.is_empty() || !self.selection.check_set(&self.cards) {
             return;
         }
 
@@ -164,14 +164,6 @@ impl<Deck: Iterator<Item = ProjCard> + Default> ProjSet<Deck> {
                 self.card_head += 1;
             });
         self.selection.clear();
-    }
-
-    fn is_selected_set(&self) -> bool {
-        self.selection
-            .into_iter()
-            .map(|i| self.cards[i as usize].get_card())
-            .sum::<ProjCard>()
-            == ProjCard::default()
     }
 
     pub fn subscription(&self) -> Subscription<Message> {

@@ -16,6 +16,8 @@ use iced::{
     },
 };
 
+use crate::selection::Selection;
+
 const DOT_RADIUS_RATIO: f32 = 0.15;
 
 const CARD_COLORS: [Color; 6] = [
@@ -86,12 +88,12 @@ impl Sum for ClassicCard {
     }
 }
 
-pub struct CardCanvas<Card: CardDraw + Clone + Copy> {
+pub struct CardCanvas<Card: CardDraw + Copy> {
     card: Card,
     cache: Cache,
 }
 
-impl<Card: CardDraw + Clone + Copy> CardCanvas<Card> {
+impl<Card: CardDraw + Copy> CardCanvas<Card> {
     pub fn new(card: Card) -> Self {
         Self {
             card,
@@ -135,7 +137,7 @@ impl<Card: CardDraw + Clone + Copy> CardCanvas<Card> {
     }
 }
 
-impl<Message, Card: CardDraw + Clone + Copy> canvas::Program<Message> for CardCanvas<Card> {
+impl<Message, Card: CardDraw + Copy> canvas::Program<Message> for CardCanvas<Card> {
     type State = ();
 
     fn draw(
