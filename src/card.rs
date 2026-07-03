@@ -16,8 +16,6 @@ use iced::{
     },
 };
 
-use crate::selection::Selection;
-
 const DOT_RADIUS_RATIO: f32 = 0.15;
 
 const CARD_COLORS: [Color; 6] = [
@@ -348,4 +346,20 @@ impl Iterator for ProjDeck {
     fn next(&mut self) -> Option<Self::Item> {
         self.deck.next()
     }
+}
+
+pub fn check_if_has_set(cards: &[CardCanvas<ClassicCard>]) -> bool {
+    let len = cards.len();
+    for i in 0..len {
+        for j in (i + 1)..len {
+            for k in (j + 1)..len {
+                if cards[i].get_card() + cards[j].get_card() + cards[k].get_card()
+                    == ClassicCard::default()
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }

@@ -7,10 +7,12 @@ mod card;
 mod projective;
 mod selection;
 mod set;
+mod timed;
 use crate::{
     card::{ClassicDeck, ProjDeck},
     projective::ProjSet,
     set::ClassicSet,
+    timed::TimedSet,
 };
 
 pub const BOARD_PADDING: f32 = 20.;
@@ -23,6 +25,7 @@ enum State {
     Menu,
     ProjSet(ProjSet<ProjDeck>),
     ClassicSet(ClassicSet<ClassicDeck>),
+    TimedSet(TimedSet<ClassicDeck>),
 }
 
 #[derive(Clone)]
@@ -30,6 +33,7 @@ enum Screen {
     Menu,
     ProjSet,
     ClassicSet,
+    TimedSet,
 }
 
 #[derive(Clone)]
@@ -37,6 +41,7 @@ enum Message {
     ChangeScreen(Screen),
     ProjSet(projective::Message),
     ClassicSet(set::Message),
+    TimedSet(timed::Message),
 }
 
 #[derive(Default)]
@@ -53,13 +58,20 @@ impl App {
             Message::ChangeScreen(Screen::ClassicSet) => {
                 self.state = State::ClassicSet(ClassicSet::default());
             }
+            Message::ChangeScreen(Screen::TimedSet) => {
+                self.state = State::TimedSet(TimedSet::default());
+            }
             Message::ProjSet(projective::Message::Exit)
-            | Message::ClassicSet(set::Message::Exit) => self.state = State::Menu,
+            | Message::ClassicSet(set::Message::Exit)
+            | Message::TimedSet(timed::Message::Exit) => self.state = State::Menu,
             Message::ProjSet(message) if let State::ProjSet(projset) = &mut self.state => {
                 projset.update(message);
             }
             Message::ClassicSet(message) if let State::ClassicSet(classicset) = &mut self.state => {
                 classicset.update(message);
+            }
+            Message::TimedSet(message) if let State::TimedSet(timedset) = &mut self.state => {
+                timedset.update(message);
             }
             _ => (),
         }
@@ -75,12 +87,16 @@ impl App {
                 widget::button("Classic Set")
                     .on_press(Message::ChangeScreen(Screen::ClassicSet))
                     .width(Length::Fixed(160.)),
+                widget::button("Timed Set")
+                    .on_press(Message::ChangeScreen(Screen::TimedSet))
+                    .width(Length::Fixed(160.)),
             ]
             .spacing(5.)
             .padding(20.)
             .into(),
             State::ProjSet(projset) => projset.view().map(Message::ProjSet),
             State::ClassicSet(classicset) => classicset.view().map(Message::ClassicSet),
+            State::TimedSet(timedset) => timedset.view().map(Message::TimedSet),
         }
     }
 
@@ -89,6 +105,7 @@ impl App {
             State::Menu => Subscription::none(),
             State::ProjSet(projset) => projset.subscription().map(Message::ProjSet),
             State::ClassicSet(classicset) => classicset.subscription().map(Message::ClassicSet),
+            State::TimedSet(timedset) => timedset.subscription().map(Message::TimedSet),
         }
     }
 }

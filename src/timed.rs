@@ -1,3 +1,5 @@
+use std::{array::from_fn, time::Duration};
+
 use iced::{
     Element, Function, Subscription,
     time::{self, Instant, milliseconds},
@@ -19,29 +21,22 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct ClassicSet<Deck: Iterator<Item = ClassicCard> + Default> {
-    cards: Vec<CardCanvas<ClassicCard>>,
+pub struct TimedSet<Deck: Iterator<Item = ClassicCard> + Default> {
+    cards: [CardCanvas<ClassicCard>; 12],
     all_cards: Deck,
     selection: Selection,
-    card_head: usize,
     finished: bool,
     start_time: Instant,
-    current_time: Instant,
+    remaining_time: Duration,
+    sets: usize,
 }
 
-impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
+impl<Deck: Iterator<Item = ClassicCard> + Default> TimedSet<Deck> {
     pub fn new() -> Self {
         let mut all_cards = Deck::default();
-        let mut initial_count = 12;
-        let mut cards: Vec<_> = all_cards
-            .by_ref()
-            .take(initial_count)
-            .map(CardCanvas::new)
-            .collect();
+        let mut cards = from_fn(|_| CardCanvas::new(all_cards.next().unwrap()));
         while !check_if_has_set(&cards) {
-            info!("no set");
-            initial_count += 3;
-            cards.extend(all_cards.by_ref().take(3).map(CardCanvas::new));
+            cards[0] = CardCanvas::new(all_cards.next().unwrap());
         }
 
         fastrand::shuffle(&mut cards);
@@ -49,11 +44,11 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
         Self {
             cards,
             all_cards,
-            selection: Selection::new(initial_count as u8),
-            card_head: initial_count,
+            selection: Selection::new(12),
             finished: false,
             start_time: Instant::now(),
-            current_time: Instant::now(),
+            remaining_time: Duration::from_secs(60),
+            sets: 0,
         }
     }
 
@@ -62,35 +57,37 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
             Message::Card(card, card::Message::Toggle) => self.toggle_card(card),
             Message::Restart => *self = Self::new(),
             Message::Exit => (),
-            Message::Tick(now) => self.current_time = now,
+            Message::Tick(now) => {
+                let passed_time = now - self.start_time;
+                if passed_time >= Duration::from_secs(60) {
+                    self.remaining_time = Duration::ZERO;
+                    self.finished = true;
+                } else {
+                    self.remaining_time = Duration::from_secs(60) - passed_time;
+                }
+            }
         }
     }
 
     pub fn view(&self) -> Element<'_, Message> {
-        let elapsed_time = (self.current_time - self.start_time).as_millis();
-        let millis = elapsed_time % 1000;
-        let seconds = (elapsed_time / 1000) % 60;
-        let minutes = elapsed_time / 60000;
         let bar = widget::row![
             widget::button("Restart").on_press(Message::Restart),
             widget::button("Menu").on_press(Message::Exit),
-            widget::text!("Remaining cards: {}", 81 - self.card_head),
-            widget::text!("Time: {:02}:{:02}", minutes, seconds),
+            widget::text!("Time: {:02}", self.remaining_time.as_secs()),
+            widget::text!("Sets: {}", self.sets),
         ]
         .spacing(5.)
         .padding(5.);
 
         let grid = container(responsive(|size| {
-            let columns = self.cards.len() / 3;
             let expected_width =
-                (size.height - GRID_SPACING * 2.) / 3. * CARD_ASPECT * columns as f32
-                    + (columns - 1) as f32 * GRID_SPACING;
+                (size.height - GRID_SPACING * 2.) / 3. * CARD_ASPECT * 4. + 3. * GRID_SPACING;
 
             grid(self.cards.iter().enumerate().map(|(i, card)| {
                 card.view(self.selection.is_selected(i as u8))
                     .map(Message::Card.with(i as u8))
             }))
-            .columns(columns)
+            .columns(4)
             .spacing(GRID_SPACING)
             .width(size.width.min(expected_width))
             .height(grid::Sizing::AspectRatio(CARD_ASPECT))
@@ -113,29 +110,14 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
     fn resolve_selection(&mut self) {
         if self.selection.check_set(&self.cards) {
             info!("You got a set!");
-            if self.cards.len() == 12 && self.card_head < 81 {
-                self.selection
-                    .zip(self.all_cards.by_ref().take(3))
-                    .for_each(|(card_idx, card)| {
-                        self.cards[card_idx as usize].set_card(card);
-                        self.card_head += 1;
-                    });
-            } else {
-                for &card_idx in self.selection.into_iter().collect::<Vec<_>>().iter().rev() {
-                    self.cards.remove(card_idx as usize);
-                }
-            }
+            self.sets += 1;
+            self.selection
+                .zip(self.all_cards.by_ref().take(3))
+                .for_each(|(card_idx, card)| self.cards[card_idx as usize].set_card(card));
 
-            while !check_if_has_set(&self.cards) && self.card_head < 81 {
-                self.cards
-                    .extend(self.all_cards.by_ref().take(3).map(CardCanvas::new));
-                self.card_head += 3;
-            }
-            self.selection.size = self.cards.len() as u8;
-
-            if !check_if_has_set(&self.cards) {
-                self.finished = true;
-                info!("You win!");
+            while !check_if_has_set(&self.cards) {
+                self.cards[self.selection.nth(fastrand::usize(0..3)).unwrap() as usize] =
+                    CardCanvas::new(self.all_cards.next().unwrap());
             }
         }
 
@@ -151,7 +133,7 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
     }
 }
 
-impl<Deck: Iterator<Item = ClassicCard> + Default> Default for ClassicSet<Deck> {
+impl<Deck: Iterator<Item = ClassicCard> + Default> Default for TimedSet<Deck> {
     fn default() -> Self {
         Self::new()
     }
