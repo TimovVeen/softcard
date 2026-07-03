@@ -28,10 +28,6 @@ impl Selection {
     pub fn is_selected(&self, index: u8) -> bool {
         self.mask & (1 << index) != 0
     }
-
-    pub fn card_count(&self) -> u8 {
-        self.mask.count_ones() as u8
-    }
 }
 
 impl Iterator for Selection {
@@ -45,5 +41,11 @@ impl Iterator for Selection {
         let pos = self.mask.trailing_zeros();
         self.mask &= self.mask - 1;
         Some(pos as u8)
+    }
+}
+
+impl ExactSizeIterator for Selection {
+    fn len(&self) -> usize {
+        self.mask.count_ones() as usize
     }
 }

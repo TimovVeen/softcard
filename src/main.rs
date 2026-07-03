@@ -7,7 +7,11 @@ mod card;
 mod projective;
 mod selection;
 mod set;
-use crate::{projective::ProjSet, set::ClassicSet};
+use crate::{
+    card::{ClassicDeck, ProjDeck},
+    projective::ProjSet,
+    set::ClassicSet,
+};
 
 pub const BOARD_PADDING: f32 = 20.;
 pub const GRID_SPACING: f32 = 20.;
@@ -17,8 +21,8 @@ pub const CARD_ASPECT: f32 = 2. / 3.;
 enum State {
     #[default]
     Menu,
-    ProjSet(ProjSet),
-    ClassicSet(ClassicSet),
+    ProjSet(ProjSet<ProjDeck>),
+    ClassicSet(ClassicSet<ClassicDeck>),
 }
 
 #[derive(Clone)]

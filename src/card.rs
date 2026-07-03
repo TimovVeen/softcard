@@ -92,9 +92,9 @@ pub struct CardCanvas<Card: CardDraw + Clone + Copy> {
 }
 
 impl<Card: CardDraw + Clone + Copy> CardCanvas<Card> {
-    pub fn new(card: &Card) -> Self {
+    pub fn new(card: Card) -> Self {
         Self {
-            card: *card,
+            card,
             cache: Cache::new(),
         }
     }
@@ -279,5 +279,71 @@ impl CardDraw for ClassicCard {
                 );
             }
         }
+    }
+}
+
+pub struct ClassicDeck {
+    deck: std::array::IntoIter<ClassicCard, 81>,
+}
+
+impl Default for ClassicDeck {
+    fn default() -> Self {
+        let mut all_cards = {
+            let mut res = [ClassicCard::default(); 81];
+            let mut i = 0;
+            for j in 0..=2 {
+                for k in 0..=2 {
+                    for l in 0..=2 {
+                        for m in 0..=2 {
+                            res[i] = ClassicCard::new([j, k, l, m]);
+                            i += 1;
+                        }
+                    }
+                }
+            }
+            res
+        };
+        fastrand::shuffle(&mut all_cards);
+        Self {
+            deck: all_cards.into_iter(),
+        }
+    }
+}
+
+impl Iterator for ClassicDeck {
+    type Item = ClassicCard;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.deck.next()
+    }
+}
+
+pub struct ProjDeck {
+    deck: std::array::IntoIter<ProjCard, 63>,
+}
+
+impl Default for ProjDeck {
+    fn default() -> Self {
+        let mut all_cards = {
+            let mut res = [ProjCard::default(); 63];
+            let mut i = 0;
+            while i < res.len() {
+                res[i] = ProjCard::new(i as u8 + 1);
+                i += 1;
+            }
+            res
+        };
+        fastrand::shuffle(&mut all_cards);
+        Self {
+            deck: all_cards.into_iter(),
+        }
+    }
+}
+
+impl Iterator for ProjDeck {
+    type Item = ProjCard;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.deck.next()
     }
 }

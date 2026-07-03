@@ -19,9 +19,9 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct ClassicSet {
+pub struct ClassicSet<Deck: Iterator<Item = ClassicCard> + Default> {
     cards: Vec<CardCanvas<ClassicCard>>,
-    all_cards: [ClassicCard; 81],
+    all_cards: Deck,
     selection: Selection,
     card_head: usize,
     finished: bool,
@@ -29,40 +29,19 @@ pub struct ClassicSet {
     current_time: Instant,
 }
 
-impl ClassicSet {
+impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
     pub fn new() -> Self {
-        let mut all_cards = {
-            let mut res = [ClassicCard::default(); 81];
-            let mut i = 0;
-            // find a better way to do this
-            for j in 0..=2 {
-                for k in 0..=2 {
-                    for l in 0..=2 {
-                        for m in 0..=2 {
-                            res[i] = ClassicCard::new([j, k, l, m]);
-                            i += 1;
-                        }
-                    }
-                }
-            }
-            res
-        };
-        fastrand::shuffle(&mut all_cards);
-
+        let mut all_cards = Deck::default();
         let mut initial_count = 12;
         let mut cards: Vec<_> = all_cards
-            .iter()
+            .by_ref()
             .take(initial_count)
             .map(CardCanvas::new)
             .collect();
         while !check_if_has_set(&cards) {
             info!("no set");
             initial_count += 3;
-            cards = all_cards
-                .iter()
-                .take(initial_count)
-                .map(CardCanvas::new)
-                .collect();
+            cards.extend(all_cards.by_ref().take(3).map(CardCanvas::new));
         }
 
         fastrand::shuffle(&mut cards);
@@ -126,7 +105,7 @@ impl ClassicSet {
             return;
         }
         self.selection.toggle(card);
-        if self.selection.card_count() == 3 {
+        if self.selection.len() == 3 {
             self.resolve_selection();
         }
     }
@@ -134,24 +113,22 @@ impl ClassicSet {
     fn resolve_selection(&mut self) {
         if self.is_selected_set() {
             info!("You got a set!");
-            if self.cards.len() == 12 && self.card_head < self.all_cards.len() {
-                for card_idx in self.selection {
-                    self.cards[card_idx as usize].set_card(self.all_cards[self.card_head]);
-                    self.card_head += 1;
-                }
+            if self.cards.len() == 12 && self.card_head < 81 {
+                self.selection
+                    .zip(self.all_cards.by_ref().take(3))
+                    .for_each(|(card_idx, card)| {
+                        self.cards[card_idx as usize].set_card(card);
+                        self.card_head += 1;
+                    });
             } else {
                 for &card_idx in self.selection.into_iter().collect::<Vec<_>>().iter().rev() {
                     self.cards.remove(card_idx as usize);
                 }
             }
 
-            while !check_if_has_set(&self.cards) && self.card_head < self.all_cards.len() {
+            while !check_if_has_set(&self.cards) && self.card_head < 81 {
                 self.cards
-                    .push(CardCanvas::new(&self.all_cards[self.card_head]));
-                self.cards
-                    .push(CardCanvas::new(&self.all_cards[self.card_head + 1]));
-                self.cards
-                    .push(CardCanvas::new(&self.all_cards[self.card_head + 2]));
+                    .extend(self.all_cards.by_ref().take(3).map(CardCanvas::new));
                 self.card_head += 3;
             }
             self.selection.size = self.cards.len() as u8;
@@ -198,7 +175,7 @@ fn check_if_has_set(cards: &[CardCanvas<ClassicCard>]) -> bool {
     false
 }
 
-impl Default for ClassicSet {
+impl<Deck: Iterator<Item = ClassicCard> + Default> Default for ClassicSet<Deck> {
     fn default() -> Self {
         Self::new()
     }

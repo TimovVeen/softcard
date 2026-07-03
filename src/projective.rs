@@ -22,9 +22,9 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct ProjSet {
+pub struct ProjSet<Deck: Iterator<Item = ProjCard> + Default> {
     cards: [CardCanvas<ProjCard>; 7],
-    all_cards: [ProjCard; 63],
+    all_cards: Deck,
     selection: Selection,
     card_head: usize,
     finished: bool,
@@ -32,21 +32,12 @@ pub struct ProjSet {
     current_time: Instant,
 }
 
-impl ProjSet {
+impl<Deck: Iterator<Item = ProjCard> + Default> ProjSet<Deck> {
     pub fn new() -> Self {
-        let mut all_cards = {
-            let mut res = [ProjCard::default(); 63];
-            let mut i = 0;
-            while i < res.len() {
-                res[i] = ProjCard::new(i as u8 + 1);
-                i += 1;
-            }
-            res
-        };
-        fastrand::shuffle(&mut all_cards);
+        let mut all_cards = Deck::default();
 
         Self {
-            cards: from_fn(|i| CardCanvas::new(&all_cards[i])),
+            cards: from_fn(|_| CardCanvas::new(all_cards.next().unwrap())),
             all_cards,
             selection: Selection::new(7),
             card_head: 7,
@@ -160,17 +151,18 @@ impl ProjSet {
         }
 
         info!("You got a set!");
-        for card in self.selection {
-            if self.card_head >= self.all_cards.len() - 1 {
-                self.finished = true;
-                self.selection.clear();
-                info!("You win!");
-                return;
-            }
-
-            self.cards[card as usize].set_card(self.all_cards[self.card_head]);
-            self.card_head += 1;
+        if self.selection.len() + self.card_head >= 63 - 1 {
+            self.finished = true;
+            self.selection.clear();
+            info!("You win!");
+            return;
         }
+        self.selection
+            .zip(self.all_cards.by_ref().take(self.selection.len()))
+            .for_each(|(card_idx, card)| {
+                self.cards[card_idx as usize].set_card(card);
+                self.card_head += 1;
+            });
         self.selection.clear();
     }
 
@@ -195,7 +187,7 @@ impl ProjSet {
     }
 }
 
-impl Default for ProjSet {
+impl<Deck: Iterator<Item = ProjCard> + Default> Default for ProjSet<Deck> {
     fn default() -> Self {
         Self::new()
     }
