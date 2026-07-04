@@ -354,20 +354,7 @@ impl Iterator for ProjDeck {
 pub fn check_if_has_set<Card: CardDraw + Copy + Sum + Default + Eq>(
     cards: &[CardCanvas<Card>],
 ) -> bool {
-    let len = cards.len();
-    for i in 0..len {
-        for j in (i + 1)..len {
-            for k in (j + 1)..len {
-                if [i, j, k]
-                    .map(|idx| cards[idx].get_card())
-                    .into_iter()
-                    .sum::<Card>()
-                    == Card::default()
-                {
-                    return true;
-                }
-            }
-        }
-    }
-    false
+    (0..cards.len())
+        .array_combinations::<3>()
+        .any(|idxs| Card::default() == idxs.map(|i| cards[i].get_card()).into_iter().sum())
 }

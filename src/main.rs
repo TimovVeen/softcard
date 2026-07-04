@@ -98,7 +98,7 @@ impl App {
                 widget::button("Timed Set")
                     .on_press(Message::ChangeScreen(Screen::TimedSet))
                     .width(Length::Fixed(160.)),
-                widget::button("Timed Projective Set")
+                widget::button("Timed Proj Set")
                     .on_press(Message::ChangeScreen(Screen::TimedProj))
                     .width(Length::Fixed(160.)),
             ]

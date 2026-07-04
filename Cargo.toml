@@ -9,6 +9,7 @@ iced = { git = "https://github.com/iced-rs/iced.git", version = "0.15.0-dev", de
 fastrand = "2.4.1"
 log = "0.4.33"
 simple_logger = { version = "5.2.0", default-features = false }
+itertools = "0.15.0"
 
 [profile.dev]
 opt-level = 1
