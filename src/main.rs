@@ -9,7 +9,7 @@ mod selection;
 mod set;
 mod timed;
 use crate::{
-    card::{ClassicDeck, ProjDeck},
+    card::{ClassicCard, ClassicDeck, ProjCard, ProjDeck},
     projective::ProjSet,
     set::ClassicSet,
     timed::TimedSet,
@@ -25,7 +25,8 @@ enum State {
     Menu,
     ProjSet(ProjSet<ProjDeck>),
     ClassicSet(ClassicSet<ClassicDeck>),
-    TimedSet(TimedSet<ClassicDeck>),
+    TimedSet(TimedSet<ClassicCard, ClassicDeck>),
+    TimedProj(TimedSet<ProjCard, ProjDeck>),
 }
 
 #[derive(Clone)]
@@ -34,6 +35,7 @@ enum Screen {
     ProjSet,
     ClassicSet,
     TimedSet,
+    TimedProj,
 }
 
 #[derive(Clone)]
@@ -59,7 +61,10 @@ impl App {
                 self.state = State::ClassicSet(ClassicSet::default());
             }
             Message::ChangeScreen(Screen::TimedSet) => {
-                self.state = State::TimedSet(TimedSet::default());
+                self.state = State::TimedSet(TimedSet::<ClassicCard, ClassicDeck>::default());
+            }
+            Message::ChangeScreen(Screen::TimedProj) => {
+                self.state = State::TimedProj(TimedSet::<ProjCard, ProjDeck>::default());
             }
             Message::ProjSet(projective::Message::Exit)
             | Message::ClassicSet(set::Message::Exit)
@@ -72,6 +77,9 @@ impl App {
             }
             Message::TimedSet(message) if let State::TimedSet(timedset) = &mut self.state => {
                 timedset.update(message);
+            }
+            Message::TimedSet(message) if let State::TimedProj(timedproj) = &mut self.state => {
+                timedproj.update(message);
             }
             _ => (),
         }
@@ -90,6 +98,9 @@ impl App {
                 widget::button("Timed Set")
                     .on_press(Message::ChangeScreen(Screen::TimedSet))
                     .width(Length::Fixed(160.)),
+                widget::button("Timed Projective Set")
+                    .on_press(Message::ChangeScreen(Screen::TimedProj))
+                    .width(Length::Fixed(160.)),
             ]
             .spacing(5.)
             .padding(20.)
@@ -97,6 +108,7 @@ impl App {
             State::ProjSet(projset) => projset.view().map(Message::ProjSet),
             State::ClassicSet(classicset) => classicset.view().map(Message::ClassicSet),
             State::TimedSet(timedset) => timedset.view().map(Message::TimedSet),
+            State::TimedProj(timedproj) => timedproj.view().map(Message::TimedSet),
         }
     }
 
@@ -106,6 +118,7 @@ impl App {
             State::ProjSet(projset) => projset.subscription().map(Message::ProjSet),
             State::ClassicSet(classicset) => classicset.subscription().map(Message::ClassicSet),
             State::TimedSet(timedset) => timedset.subscription().map(Message::TimedSet),
+            State::TimedProj(timedproj) => timedproj.subscription().map(Message::TimedSet),
         }
     }
 }

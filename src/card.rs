@@ -15,6 +15,7 @@ use iced::{
         container, mouse_area,
     },
 };
+use itertools::Itertools;
 
 const DOT_RADIUS_RATIO: f32 = 0.15;
 
@@ -319,6 +320,7 @@ impl Iterator for ClassicDeck {
     }
 }
 
+#[derive(Clone)]
 pub struct ProjDeck {
     deck: std::array::IntoIter<ProjCard, 63>,
 }
@@ -349,13 +351,18 @@ impl Iterator for ProjDeck {
     }
 }
 
-pub fn check_if_has_set(cards: &[CardCanvas<ClassicCard>]) -> bool {
+pub fn check_if_has_set<Card: CardDraw + Copy + Sum + Default + Eq>(
+    cards: &[CardCanvas<Card>],
+) -> bool {
     let len = cards.len();
     for i in 0..len {
         for j in (i + 1)..len {
             for k in (j + 1)..len {
-                if cards[i].get_card() + cards[j].get_card() + cards[k].get_card()
-                    == ClassicCard::default()
+                if [i, j, k]
+                    .map(|idx| cards[idx].get_card())
+                    .into_iter()
+                    .sum::<Card>()
+                    == Card::default()
                 {
                     return true;
                 }

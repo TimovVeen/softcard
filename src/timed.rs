@@ -1,4 +1,9 @@
-use std::{array::from_fn, iter::Cycle, time::Duration};
+use std::{
+    array::from_fn,
+    iter::{Cycle, Sum},
+    ops::Add,
+    time::Duration,
+};
 
 use iced::{
     Element, Function, Subscription,
@@ -9,7 +14,7 @@ use log::info;
 
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
-    card::{self, CardCanvas, ClassicCard, check_if_has_set},
+    card::{self, CardCanvas, CardDraw, check_if_has_set},
     selection::Selection,
 };
 
@@ -21,8 +26,11 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct TimedSet<Deck: Iterator<Item = ClassicCard> + Default + Clone> {
-    cards: [CardCanvas<ClassicCard>; 12],
+pub struct TimedSet<
+    Card: CardDraw + Copy + Sum + Default + Eq + Add,
+    Deck: Iterator<Item = Card> + Default + Clone,
+> {
+    cards: [CardCanvas<Card>; 12],
     all_cards: Cycle<Deck>,
     selection: Selection,
     finished: bool,
@@ -31,7 +39,11 @@ pub struct TimedSet<Deck: Iterator<Item = ClassicCard> + Default + Clone> {
     sets: usize,
 }
 
-impl<Deck: Iterator<Item = ClassicCard> + Default + Clone> TimedSet<Deck> {
+impl<
+    Card: CardDraw + Copy + Sum + Default + Eq + Add,
+    Deck: Iterator<Item = Card> + Default + Clone,
+> TimedSet<Card, Deck>
+{
     pub fn new() -> Self {
         let mut all_cards = Deck::default().cycle();
         let mut cards = from_fn(|_| CardCanvas::new(all_cards.next().unwrap()));
@@ -111,7 +123,7 @@ impl<Deck: Iterator<Item = ClassicCard> + Default + Clone> TimedSet<Deck> {
         if self.selection.check_set(&self.cards) {
             info!("You got a set!");
             self.sets += 1;
-            let new_cards: Vec<ClassicCard> = self
+            let new_cards: Vec<Card> = self
                 .all_cards
                 .by_ref()
                 .filter(|&x| !has_card(&self.cards, x))
@@ -139,11 +151,15 @@ impl<Deck: Iterator<Item = ClassicCard> + Default + Clone> TimedSet<Deck> {
     }
 }
 
-fn has_card(cards: &[CardCanvas<ClassicCard>], card: ClassicCard) -> bool {
+fn has_card<Card: CardDraw + Copy + Eq>(cards: &[CardCanvas<Card>], card: Card) -> bool {
     cards.iter().any(|cardcanvas| cardcanvas.get_card() == card)
 }
 
-impl<Deck: Iterator<Item = ClassicCard> + Default + Clone> Default for TimedSet<Deck> {
+impl<
+    Card: CardDraw + Copy + Sum + Default + Eq + Add,
+    Deck: Iterator<Item = Card> + Default + Clone,
+> Default for TimedSet<Card, Deck>
+{
     fn default() -> Self {
         Self::new()
     }
