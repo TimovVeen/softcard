@@ -1,4 +1,4 @@
-use std::{iter::Sum, ops::Add};
+use std::{array::from_fn, iter::Sum, ops::Add};
 
 use iced::{
     Border, Color, Element, Length, Point, Rectangle, Renderer, Size, Theme,
@@ -15,7 +15,7 @@ use iced::{
         container, mouse_area,
     },
 };
-use itertools::Itertools;
+use itertools::{Itertools, iproduct};
 
 const DOT_RADIUS_RATIO: f32 = 0.15;
 
@@ -290,21 +290,11 @@ pub struct ClassicDeck {
 
 impl Default for ClassicDeck {
     fn default() -> Self {
-        let mut all_cards = {
-            let mut res = [ClassicCard::default(); 81];
-            let mut i = 0;
-            for j in 0..=2 {
-                for k in 0..=2 {
-                    for l in 0..=2 {
-                        for m in 0..=2 {
-                            res[i] = ClassicCard::new([j, k, l, m]);
-                            i += 1;
-                        }
-                    }
-                }
-            }
-            res
-        };
+        let mut all_cards: [ClassicCard; 81] = iproduct!(0..3, 0..3, 0..3, 0..3)
+            .map(|idxs| ClassicCard::new(idxs.into()))
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap();
         fastrand::shuffle(&mut all_cards);
         Self {
             deck: all_cards.into_iter(),
@@ -327,15 +317,7 @@ pub struct ProjDeck {
 
 impl Default for ProjDeck {
     fn default() -> Self {
-        let mut all_cards = {
-            let mut res = [ProjCard::default(); 63];
-            let mut i = 0;
-            while i < res.len() {
-                res[i] = ProjCard::new(i as u8 + 1);
-                i += 1;
-            }
-            res
-        };
+        let mut all_cards = from_fn(|i| ProjCard::new(i as u8 + 1));
         fastrand::shuffle(&mut all_cards);
         Self {
             deck: all_cards.into_iter(),
