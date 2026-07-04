@@ -1,11 +1,11 @@
 [package]
 name = "softcard"
-version = "0.4.2"
+version = "0.5.0"
 rust-version = "1.95"
 edition = "2024"
 
 [dependencies]
-iced = { git = "https://github.com/iced-rs/iced.git", version = "0.15.0-dev", default-features = false, features = ["tiny-skia", "crisp", "linux-theme-detection", "x11", "wayland", "canvas", "smol"] }
+iced = { git = "https://github.com/iced-rs/iced.git", version = "0.15.0-dev", default-features = false, features = ["tiny-skia", "crisp", "x11", "wayland", "canvas", "smol"] }
 fastrand = "2.4.1"
 log = "0.4.33"
 simple_logger = { version = "5.2.0", default-features = false }

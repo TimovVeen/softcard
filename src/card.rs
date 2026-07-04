@@ -282,6 +282,7 @@ impl CardDraw for ClassicCard {
     }
 }
 
+#[derive(Clone)]
 pub struct ClassicDeck {
     deck: std::array::IntoIter<ClassicCard, 81>,
 }

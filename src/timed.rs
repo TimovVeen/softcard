@@ -1,4 +1,4 @@
-use std::{array::from_fn, time::Duration};
+use std::{array::from_fn, iter::Cycle, time::Duration};
 
 use iced::{
     Element, Function, Subscription,
@@ -21,9 +21,9 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct TimedSet<Deck: Iterator<Item = ClassicCard> + Default> {
+pub struct TimedSet<Deck: Iterator<Item = ClassicCard> + Default + Clone> {
     cards: [CardCanvas<ClassicCard>; 12],
-    all_cards: Deck,
+    all_cards: Cycle<Deck>,
     selection: Selection,
     finished: bool,
     start_time: Instant,
@@ -31,12 +31,12 @@ pub struct TimedSet<Deck: Iterator<Item = ClassicCard> + Default> {
     sets: usize,
 }
 
-impl<Deck: Iterator<Item = ClassicCard> + Default> TimedSet<Deck> {
+impl<Deck: Iterator<Item = ClassicCard> + Default + Clone> TimedSet<Deck> {
     pub fn new() -> Self {
-        let mut all_cards = Deck::default();
+        let mut all_cards = Deck::default().cycle();
         let mut cards = from_fn(|_| CardCanvas::new(all_cards.next().unwrap()));
         while !check_if_has_set(&cards) {
-            cards[0] = CardCanvas::new(all_cards.next().unwrap());
+            cards[0] = CardCanvas::new(all_cards.find(|&x| !has_card(&cards, x)).unwrap());
         }
 
         fastrand::shuffle(&mut cards);
@@ -111,13 +111,19 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> TimedSet<Deck> {
         if self.selection.check_set(&self.cards) {
             info!("You got a set!");
             self.sets += 1;
+            let new_cards: Vec<ClassicCard> = self
+                .all_cards
+                .by_ref()
+                .filter(|&x| !has_card(&self.cards, x))
+                .take(3)
+                .collect();
             self.selection
-                .zip(self.all_cards.by_ref().take(3))
+                .zip(new_cards)
                 .for_each(|(card_idx, card)| self.cards[card_idx as usize].set_card(card));
 
             while !check_if_has_set(&self.cards) {
                 self.cards[self.selection.nth(fastrand::usize(0..3)).unwrap() as usize] =
-                    CardCanvas::new(self.all_cards.next().unwrap());
+                    CardCanvas::new(self.all_cards.find(|&x| !has_card(&self.cards, x)).unwrap());
             }
         }
 
@@ -133,7 +139,11 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> TimedSet<Deck> {
     }
 }
 
-impl<Deck: Iterator<Item = ClassicCard> + Default> Default for TimedSet<Deck> {
+fn has_card(cards: &[CardCanvas<ClassicCard>], card: ClassicCard) -> bool {
+    cards.iter().any(|cardcanvas| cardcanvas.get_card() == card)
+}
+
+impl<Deck: Iterator<Item = ClassicCard> + Default + Clone> Default for TimedSet<Deck> {
     fn default() -> Self {
         Self::new()
     }
