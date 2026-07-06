@@ -24,9 +24,9 @@ pub struct ClassicSet<Deck: Iterator<Item = ClassicCard> + Default> {
     all_cards: Deck,
     selection: Selection,
     card_head: usize,
-    finished: bool,
-    start_time: Instant,
-    current_time: Instant,
+    pub finished: bool,
+    pub start_time: Instant,
+    pub current_time: Instant,
 }
 
 impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {

@@ -1,15 +1,18 @@
 [package]
 name = "softcard"
-version = "0.5.0"
+version = "0.6.0"
 rust-version = "1.95"
 edition = "2024"
 
 [dependencies]
 iced = { git = "https://github.com/iced-rs/iced.git", version = "0.15.0-dev", default-features = false, features = ["tiny-skia", "crisp", "x11", "wayland", "canvas", "smol"] }
-fastrand = "2.4.1"
-log = "0.4.33"
-simple_logger = { version = "5.2.0", default-features = false }
-itertools = "0.15.0"
+fastrand = "2"
+log = "0.4"
+simple_logger = { version = "5", default-features = false }
+itertools = "0.15"
+ron = "0.12"
+serde = { version = "1", features = ["derive"] }
+directories = "6"
 
 [profile.dev]
 opt-level = 1

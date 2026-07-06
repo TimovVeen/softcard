@@ -33,10 +33,10 @@ pub struct TimedSet<
     cards: [CardCanvas<Card>; 12],
     all_cards: Cycle<Deck>,
     selection: Selection,
-    finished: bool,
+    pub finished: bool,
     start_time: Instant,
     remaining_time: Duration,
-    sets: usize,
+    pub sets: usize,
 }
 
 impl<
