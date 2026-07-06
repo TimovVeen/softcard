@@ -134,7 +134,11 @@ impl<
                 .for_each(|(card_idx, card)| self.cards[card_idx as usize].set_card(card));
 
             while !check_if_has_set(&self.cards) {
-                self.cards[self.selection.nth(fastrand::usize(0..3)).unwrap() as usize] =
+                self.cards[self
+                    .selection
+                    .into_iter()
+                    .nth(fastrand::usize(0..3))
+                    .unwrap() as usize] =
                     CardCanvas::new(self.all_cards.find(|&x| !has_card(&self.cards, x)).unwrap());
             }
         }
