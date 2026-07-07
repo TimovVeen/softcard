@@ -36,7 +36,7 @@ pub struct TimedSet<
     pub finished: bool,
     start_time: Instant,
     remaining_time: Duration,
-    pub sets: usize,
+    pub sets: u32,
 }
 
 impl<

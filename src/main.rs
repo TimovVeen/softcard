@@ -25,8 +25,51 @@ pub const CARD_ASPECT: f32 = 2. / 3.;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 struct UserData {
-    best_times: HashMap<String, u64>,
-    best_cards: HashMap<String, u32>,
+    best_times: HashMap<Screen, Duration>,
+    best_cards: HashMap<Screen, u32>,
+}
+
+impl UserData {
+    fn try_load() -> Option<Self> {
+        let data_file = ProjectDirs::from("com", "ItsAPixel", "Softcard")?
+            .data_dir()
+            .join("score.ron");
+        let data = fs::read_to_string(data_file).ok()?;
+        ron::from_str(&data).ok()
+    }
+
+    fn write_score(&self) -> io::Result<()> {
+        let proj_dirs = ProjectDirs::from("com", "ItsAPixel", "Softcard").unwrap();
+        let data_dir = proj_dirs.data_dir();
+        if !data_dir.exists() {
+            fs::create_dir_all(data_dir)?;
+        }
+        let data_file = data_dir.join("score.ron");
+        fs::write(
+            data_file,
+            ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()).unwrap(),
+        )
+    }
+
+    fn add_time(&mut self, screen: Screen, time: Duration) {
+        if self
+            .best_times
+            .get(&screen)
+            .copied()
+            .unwrap_or(Duration::MAX)
+            > time
+        {
+            self.best_times.insert(screen, time);
+            self.write_score().unwrap();
+        }
+    }
+
+    fn add_cards(&mut self, screen: Screen, cards: u32) {
+        if self.best_cards.get(&screen).copied().unwrap_or(0_u32) < cards {
+            self.best_cards.insert(screen, cards);
+            self.write_score().unwrap();
+        }
+    }
 }
 
 #[derive(Default)]
@@ -40,13 +83,37 @@ enum State {
     TimedProj(TimedSet<ProjCard, ProjDeck>),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 enum Screen {
     Menu,
     ProjSet,
     ClassicSet,
     TimedSet,
     TimedProj,
+}
+
+impl From<Screen> for State {
+    fn from(screen: Screen) -> Self {
+        match screen {
+            Screen::Menu => State::Menu,
+            Screen::ProjSet => State::ProjSet(ProjSet::default()),
+            Screen::ClassicSet => State::ClassicSet(ClassicSet::default()),
+            Screen::TimedSet => State::TimedSet(TimedSet::<ClassicCard, ClassicDeck>::default()),
+            Screen::TimedProj => State::TimedProj(TimedSet::<ProjCard, ProjDeck>::default()),
+        }
+    }
+}
+
+impl From<&State> for Screen {
+    fn from(state: &State) -> Self {
+        match state {
+            State::Menu => Screen::Menu,
+            State::ProjSet(_) => Screen::ProjSet,
+            State::ClassicSet(_) => Screen::ClassicSet,
+            State::TimedSet(_) => Screen::TimedSet,
+            State::TimedProj(_) => Screen::TimedProj,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -65,88 +132,43 @@ struct App {
 
 impl App {
     fn new() -> Self {
-        let proj_dirs = ProjectDirs::from("com", "ItsAPixel", "Softcard").unwrap();
-        let data_file = proj_dirs.data_dir().join("score.ron");
-        let userdata = if let Ok(data) = fs::read_to_string(data_file) {
-            ron::from_str(&data).unwrap_or_default()
-        } else {
-            UserData::default()
-        };
         Self {
-            userdata,
+            userdata: UserData::try_load().unwrap_or_default(),
             ..Default::default()
         }
     }
 
     fn update(&mut self, message: Message) {
+        let current_screen = Screen::from(&self.state);
         match message {
-            Message::ChangeScreen(Screen::ProjSet) => {
-                self.state = State::ProjSet(ProjSet::default());
-            }
-            Message::ChangeScreen(Screen::ClassicSet) => {
-                self.state = State::ClassicSet(ClassicSet::default());
-            }
-            Message::ChangeScreen(Screen::TimedSet) => {
-                self.state = State::TimedSet(TimedSet::<ClassicCard, ClassicDeck>::default());
-            }
-            Message::ChangeScreen(Screen::TimedProj) => {
-                self.state = State::TimedProj(TimedSet::<ProjCard, ProjDeck>::default());
-            }
+            Message::ChangeScreen(screen) => self.state = screen.into(),
             Message::ProjSet(projective::Message::Exit)
             | Message::ClassicSet(set::Message::Exit)
             | Message::TimedSet(timed::Message::Exit) => self.state = State::Menu,
             Message::ProjSet(message) if let State::ProjSet(projset) = &mut self.state => {
                 projset.update(message);
-                let final_time = (projset.current_time - projset.start_time).as_millis() as u64;
-                if projset.finished
-                    && *self.userdata.best_times.get("projset").unwrap_or(&u64::MAX) > final_time
-                {
-                    self.userdata
-                        .best_times
-                        .insert("projset".to_string(), final_time);
-                    self.update_score().unwrap();
+                let final_time = projset.current_time - projset.start_time;
+                if projset.finished {
+                    self.userdata.add_time(current_screen, final_time);
                 }
             }
             Message::ClassicSet(message) if let State::ClassicSet(classicset) = &mut self.state => {
                 classicset.update(message);
-                let final_time =
-                    (classicset.current_time - classicset.start_time).as_millis() as u64;
-                if classicset.finished
-                    && *self
-                        .userdata
-                        .best_times
-                        .get("classicset")
-                        .unwrap_or(&u64::MAX)
-                        > final_time
-                {
-                    self.userdata
-                        .best_times
-                        .insert("classicset".to_string(), final_time);
-                    self.update_score().unwrap();
+                let final_time = classicset.current_time - classicset.start_time;
+                if classicset.finished {
+                    self.userdata.add_time(current_screen, final_time);
                 }
             }
             Message::TimedSet(message) if let State::TimedSet(timedset) = &mut self.state => {
                 timedset.update(message);
-                if timedset.finished
-                    && *self.userdata.best_cards.get("timedset").unwrap_or(&0_u32)
-                        < timedset.sets as u32
-                {
-                    self.userdata
-                        .best_cards
-                        .insert("timedset".to_string(), timedset.sets as u32);
-                    self.update_score().unwrap();
+                if timedset.finished {
+                    self.userdata.add_cards(current_screen, timedset.sets);
                 }
             }
             Message::TimedSet(message) if let State::TimedProj(timedproj) = &mut self.state => {
                 timedproj.update(message);
-                if timedproj.finished
-                    && *self.userdata.best_cards.get("timedproj").unwrap_or(&0_u32)
-                        < timedproj.sets as u32
-                {
-                    self.userdata
-                        .best_cards
-                        .insert("timedproj".to_string(), timedproj.sets as u32);
-                    self.update_score().unwrap();
+                if timedproj.finished {
+                    self.userdata.add_cards(current_screen, timedproj.sets);
                 }
             }
             _ => (),
@@ -189,23 +211,14 @@ impl App {
             State::TimedProj(timedproj) => timedproj.subscription().map(Message::TimedSet),
         }
     }
-
-    fn update_score(&self) -> io::Result<()> {
-        let proj_dirs = ProjectDirs::from("com", "ItsAPixel", "Softcard").unwrap();
-        let data_dir = proj_dirs.data_dir();
-        if !data_dir.exists() {
-            fs::create_dir_all(data_dir)?;
-        }
-        let data_file = data_dir.join("score.ron");
-        fs::write(
-            data_file,
-            ron::ser::to_string_pretty(&self.userdata, ron::ser::PrettyConfig::default()).unwrap(),
-        )
-    }
 }
 
 fn main() -> iced::Result {
-    simple_logger::init_with_level(log::Level::Info).unwrap();
+    #[cfg(debug_assertions)]
+    let log_level = log::Level::Debug;
+    #[cfg(not(debug_assertions))]
+    let log_level = log::Level::Warn;
+    simple_logger::init_with_level(log_level).unwrap();
 
     iced::application(App::new, App::update, App::view)
         .title("Softcard")
