@@ -179,18 +179,42 @@ impl App {
         match &self.state {
             State::Menu => widget::column![
                 widget::text!["Select Game:"],
-                widget::button("Projective Set")
-                    .on_press(Message::ChangeScreen(Screen::ProjSet))
-                    .width(Length::Fixed(160.)),
-                widget::button("Classic Set")
-                    .on_press(Message::ChangeScreen(Screen::ClassicSet))
-                    .width(Length::Fixed(160.)),
-                widget::button("Timed Set")
-                    .on_press(Message::ChangeScreen(Screen::TimedSet))
-                    .width(Length::Fixed(160.)),
-                widget::button("Timed Proj Set")
-                    .on_press(Message::ChangeScreen(Screen::TimedProj))
-                    .width(Length::Fixed(160.)),
+                widget::button(widget::text!(
+                    "Projective Set\nBest time: {}",
+                    self.userdata
+                        .best_times
+                        .get(&Screen::ProjSet)
+                        .map_or("None".to_string(), |time| format!("{}s", time.as_secs()))
+                ))
+                .on_press(Message::ChangeScreen(Screen::ProjSet))
+                .width(Length::Fixed(160.)),
+                widget::button(widget::text!(
+                    "Classic Set\nBest time: {}",
+                    self.userdata
+                        .best_times
+                        .get(&Screen::ClassicSet)
+                        .map_or("None".to_string(), |time| format!("{}s", time.as_secs()))
+                ))
+                .on_press(Message::ChangeScreen(Screen::ClassicSet))
+                .width(Length::Fixed(160.)),
+                widget::button(widget::text!(
+                    "Timed Set\nMost cards: {}",
+                    self.userdata
+                        .best_cards
+                        .get(&Screen::TimedSet)
+                        .map_or("None".to_string(), |cards| cards.to_string())
+                ))
+                .on_press(Message::ChangeScreen(Screen::TimedSet))
+                .width(Length::Fixed(160.)),
+                widget::button(widget::text!(
+                    "Timed Projective\nMost cards: {}",
+                    self.userdata
+                        .best_cards
+                        .get(&Screen::TimedProj)
+                        .map_or("None".to_string(), |cards| cards.to_string())
+                ))
+                .on_press(Message::ChangeScreen(Screen::TimedProj))
+                .width(Length::Fixed(160.)),
             ]
             .spacing(5.)
             .padding(20.)
