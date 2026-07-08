@@ -1,10 +1,11 @@
-use std::{collections::HashMap, fs, io, time::Duration};
+use std::{collections::HashMap, io, time::Duration};
 
 use directories::ProjectDirs;
 use iced::{
     Element, Length, Subscription, Task,
     widget::{self},
 };
+use log::error;
 use serde::{Deserialize, Serialize};
 
 mod card;
@@ -38,20 +39,23 @@ impl UserData {
         ron::from_str(&data).ok()
     }
 
-    fn write_score(&self) -> io::Result<()> {
-        let proj_dirs = ProjectDirs::from("com", "ItsAPixel", "Softcard").unwrap();
-        let data_dir = proj_dirs.data_dir();
-        if !data_dir.exists() {
-            fs::create_dir_all(data_dir)?;
-        }
+    fn write_score(&self) -> Task<io::Result<()>> {
+        let data_dir = ProjectDirs::from("com", "ItsAPixel", "Softcard")
+            .unwrap()
+            .data_dir()
+            .to_path_buf();
         let data_file = data_dir.join("score.ron");
-        fs::write(
-            data_file,
-            ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()).unwrap(),
-        )
+        let serialized =
+            ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default()).unwrap();
+        Task::future(async move {
+            if !data_dir.exists() {
+                smol::fs::create_dir_all(data_dir).await?;
+            }
+            smol::fs::write(data_file, serialized).await
+        })
     }
 
-    fn add_time(&mut self, screen: Screen, time: Duration) {
+    fn add_time(&mut self, screen: Screen, time: Duration) -> Task<io::Result<()>> {
         if self
             .best_times
             .get(&screen)
@@ -60,14 +64,18 @@ impl UserData {
             > time
         {
             self.best_times.insert(screen, time);
-            self.write_score().unwrap();
+            self.write_score()
+        } else {
+            Task::none()
         }
     }
 
-    fn add_cards(&mut self, screen: Screen, cards: u32) {
+    fn add_cards(&mut self, screen: Screen, cards: u32) -> Task<io::Result<()>> {
         if self.best_cards.get(&screen).copied().unwrap_or(0_u32) < cards {
             self.best_cards.insert(screen, cards);
-            self.write_score().unwrap();
+            self.write_score()
+        } else {
+            Task::none()
         }
     }
 }
@@ -119,6 +127,7 @@ impl From<&State> for Screen {
 #[derive(Clone)]
 enum Message {
     ChangeScreen(Screen),
+    Error(Result<(), String>),
     UserDataRead(Option<UserData>),
     ProjSet(projective::Message),
     ClassicSet(set::Message),
@@ -143,15 +152,24 @@ impl App {
         match message {
             Message::ChangeScreen(screen) => self.state = screen.into(),
             Message::UserDataRead(Some(userdata)) => self.userdata = userdata,
+            Message::Error(Err(e)) => error!("{e}"),
             Message::ProjSet(projective::Message::Exit)
             | Message::ClassicSet(set::Message::Exit)
             | Message::TimedSet(timed::Message::Exit) => self.state = State::Menu,
             Message::ProjSet(projective::Message::Finished(time))
             | Message::ClassicSet(set::Message::Finished(time)) => {
-                self.userdata.add_time(Screen::from(&self.state), time)
+                return self
+                    .userdata
+                    .add_time(Screen::from(&self.state), time)
+                    .map_err(|e| format!("User data write error: {e}"))
+                    .map(Message::Error);
             }
             Message::TimedSet(timed::Message::Finished(cards)) => {
-                self.userdata.add_cards(Screen::from(&self.state), cards)
+                return self
+                    .userdata
+                    .add_cards(Screen::from(&self.state), cards)
+                    .map_err(|e| format!("User data write error: {e}"))
+                    .map(Message::Error);
             }
             Message::ProjSet(message) if let State::ProjSet(projset) = &mut self.state => {
                 return projset.update(message).map(Message::ProjSet);
