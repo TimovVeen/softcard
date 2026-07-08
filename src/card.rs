@@ -283,60 +283,51 @@ impl CardDraw for ClassicCard {
     }
 }
 
-#[derive(Clone)]
-pub struct ClassicDeck {
-    deck: std::array::IntoIter<ClassicCard, 81>,
-}
-
-impl Default for ClassicDeck {
-    fn default() -> Self {
-        let mut all_cards: [ClassicCard; 81] = iproduct!(0..3, 0..3, 0..3, 0..3)
-            .map(|idxs| ClassicCard::new(idxs.into()))
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap();
-        fastrand::shuffle(&mut all_cards);
-        Self {
-            deck: all_cards.into_iter(),
-        }
-    }
-}
-
-impl Iterator for ClassicDeck {
-    type Item = ClassicCard;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.deck.next()
-    }
-}
-
-#[derive(Clone)]
-pub struct ProjDeck {
-    deck: std::array::IntoIter<ProjCard, 63>,
-}
-
-impl Default for ProjDeck {
-    fn default() -> Self {
-        let mut all_cards = from_fn(|i| ProjCard::new(i as u8 + 1));
-        fastrand::shuffle(&mut all_cards);
-        Self {
-            deck: all_cards.into_iter(),
-        }
-    }
-}
-
-impl Iterator for ProjDeck {
-    type Item = ProjCard;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.deck.next()
-    }
-}
-
 pub fn check_if_has_set<Card: CardDraw + Copy + Sum + Default + Eq>(
     cards: &[CardCanvas<Card>],
 ) -> bool {
     (0..cards.len())
         .array_combinations::<3>()
         .any(|idxs| Card::default() == idxs.map(|i| cards[i].get_card()).into_iter().sum())
+}
+
+#[derive(Clone)]
+pub struct ShuffleDeck<C: Card> {
+    deck: std::vec::IntoIter<C>,
+}
+
+impl<C: Card> Default for ShuffleDeck<C> {
+    fn default() -> Self {
+        let mut all_cards = C::all();
+        fastrand::shuffle(&mut all_cards);
+        Self {
+            deck: all_cards.into_iter(),
+        }
+    }
+}
+
+impl<C: Card> Iterator for ShuffleDeck<C> {
+    type Item = C;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.deck.next()
+    }
+}
+
+pub trait Card: CardDraw + Copy + Sum + Default + Eq {
+    fn all() -> Vec<Self>;
+}
+
+impl Card for ClassicCard {
+    fn all() -> Vec<Self> {
+        iproduct!(0..3, 0..3, 0..3, 0..3)
+            .map(|idxs| ClassicCard::new(idxs.into()))
+            .collect()
+    }
+}
+
+impl Card for ProjCard {
+    fn all() -> Vec<Self> {
+        from_fn::<_, 63, _>(|i| ProjCard::new(i as u8 + 1)).to_vec()
+    }
 }

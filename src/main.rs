@@ -13,7 +13,7 @@ mod selection;
 mod set;
 mod timed;
 use crate::{
-    card::{ClassicCard, ClassicDeck, ProjCard, ProjDeck},
+    card::{ClassicCard, ProjCard, ShuffleDeck},
     projective::ProjSet,
     set::ClassicSet,
     timed::TimedSet,
@@ -77,10 +77,10 @@ impl UserData {
 enum State {
     #[default]
     Menu,
-    ProjSet(ProjSet<ProjDeck>),
-    ClassicSet(ClassicSet<ClassicDeck>),
-    TimedSet(TimedSet<ClassicCard, ClassicDeck>),
-    TimedProj(TimedSet<ProjCard, ProjDeck>),
+    ProjSet(ProjSet<ShuffleDeck<ProjCard>>),
+    ClassicSet(ClassicSet<ShuffleDeck<ClassicCard>>),
+    TimedSet(TimedSet<ClassicCard, ShuffleDeck<ClassicCard>>),
+    TimedProj(TimedSet<ProjCard, ShuffleDeck<ProjCard>>),
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
@@ -98,8 +98,8 @@ impl From<Screen> for State {
             Screen::Menu => State::Menu,
             Screen::ProjSet => State::ProjSet(ProjSet::default()),
             Screen::ClassicSet => State::ClassicSet(ClassicSet::default()),
-            Screen::TimedSet => State::TimedSet(TimedSet::<ClassicCard, ClassicDeck>::default()),
-            Screen::TimedProj => State::TimedProj(TimedSet::<ProjCard, ProjDeck>::default()),
+            Screen::TimedSet => State::TimedSet(TimedSet::default()),
+            Screen::TimedProj => State::TimedProj(TimedSet::default()),
         }
     }
 }
