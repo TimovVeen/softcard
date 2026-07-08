@@ -23,18 +23,18 @@ pub const BOARD_PADDING: f32 = 20.;
 pub const GRID_SPACING: f32 = 20.;
 pub const CARD_ASPECT: f32 = 2. / 3.;
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 struct UserData {
     best_times: HashMap<Screen, Duration>,
     best_cards: HashMap<Screen, u32>,
 }
 
 impl UserData {
-    fn try_load() -> Option<Self> {
+    async fn try_load() -> Option<Self> {
         let data_file = ProjectDirs::from("com", "ItsAPixel", "Softcard")?
             .data_dir()
             .join("score.ron");
-        let data = fs::read_to_string(data_file).ok()?;
+        let data = smol::fs::read_to_string(data_file).await.ok()?;
         ron::from_str(&data).ok()
     }
 
@@ -119,6 +119,7 @@ impl From<&State> for Screen {
 #[derive(Clone)]
 enum Message {
     ChangeScreen(Screen),
+    UserDataRead(Option<UserData>),
     ProjSet(projective::Message),
     ClassicSet(set::Message),
     TimedSet(timed::Message),
@@ -131,16 +132,17 @@ struct App {
 }
 
 impl App {
-    fn new() -> Self {
-        Self {
-            userdata: UserData::try_load().unwrap_or_default(),
-            ..Default::default()
-        }
+    fn new() -> (Self, Task<Message>) {
+        (
+            Self::default(),
+            Task::perform(UserData::try_load(), Message::UserDataRead),
+        )
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::ChangeScreen(screen) => self.state = screen.into(),
+            Message::UserDataRead(Some(userdata)) => self.userdata = userdata,
             Message::ProjSet(projective::Message::Exit)
             | Message::ClassicSet(set::Message::Exit)
             | Message::TimedSet(timed::Message::Exit) => self.state = State::Menu,

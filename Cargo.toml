@@ -13,6 +13,7 @@ itertools = "0.15"
 ron = "0.12"
 serde = { version = "1", features = ["derive"] }
 directories = "6"
+smol = "2.0"
 
 [profile.release]
 strip = true
