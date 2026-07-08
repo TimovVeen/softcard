@@ -41,6 +41,7 @@ pub struct ProjCard {
 impl Add for ProjCard {
     type Output = Self;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn add(self, rhs: Self) -> Self::Output {
         Self::Output::new(self.mask ^ rhs.mask)
     }

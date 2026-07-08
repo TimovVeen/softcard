@@ -1,6 +1,6 @@
 use iced::{
-    Element, Function, Subscription,
-    time::{self, Instant, milliseconds},
+    Element, Function, Subscription, Task,
+    time::{self, Duration, Instant, milliseconds},
     widget::{self, container, grid, responsive},
 };
 use log::info;
@@ -16,6 +16,7 @@ pub enum Message {
     Card(u8, card::Message),
     Restart,
     Exit,
+    Finished(Duration),
     Tick(Instant),
 }
 
@@ -24,9 +25,9 @@ pub struct ClassicSet<Deck: Iterator<Item = ClassicCard> + Default> {
     all_cards: Deck,
     selection: Selection,
     card_head: usize,
-    pub finished: bool,
-    pub start_time: Instant,
-    pub current_time: Instant,
+    finished: bool,
+    start_time: Instant,
+    current_time: Instant,
 }
 
 impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
@@ -57,18 +58,24 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::Card(card, card::Message::Toggle) => self.toggle_card(card),
+            Message::Card(card, card::Message::Toggle) => {
+                self.toggle_card(card);
+                if self.finished {
+                    return Task::done(Message::Finished(self.current_time - self.start_time));
+                }
+            }
             Message::Restart => *self = Self::new(),
-            Message::Exit => (),
+            Message::Exit | Message::Finished(_) => (),
             Message::Tick(now) => self.current_time = now,
         }
+        Task::none()
     }
 
     pub fn view(&self) -> Element<'_, Message> {
         let elapsed_time = (self.current_time - self.start_time).as_millis();
-        let millis = elapsed_time % 1000;
+        let _millis = elapsed_time % 1000;
         let seconds = (elapsed_time / 1000) % 60;
         let minutes = elapsed_time / 60000;
         let bar = widget::row![

@@ -6,7 +6,7 @@ use std::{
 };
 
 use iced::{
-    Element, Function, Subscription,
+    Element, Function, Subscription, Task,
     time::{self, Instant, milliseconds},
     widget::{self, container, grid, responsive},
 };
@@ -23,6 +23,7 @@ pub enum Message {
     Card(u8, card::Message),
     Restart,
     Exit,
+    Finished(u32),
     Tick(Instant),
 }
 
@@ -33,10 +34,10 @@ pub struct TimedSet<
     cards: [CardCanvas<Card>; 12],
     all_cards: Cycle<Deck>,
     selection: Selection,
-    pub finished: bool,
+    finished: bool,
     start_time: Instant,
     remaining_time: Duration,
-    pub sets: u32,
+    sets: u32,
 }
 
 impl<
@@ -64,21 +65,23 @@ impl<
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Card(card, card::Message::Toggle) => self.toggle_card(card),
             Message::Restart => *self = Self::new(),
-            Message::Exit => (),
+            Message::Exit | Message::Finished(_) => (),
             Message::Tick(now) => {
                 let passed_time = now - self.start_time;
                 if passed_time >= Duration::from_secs(60) {
                     self.remaining_time = Duration::ZERO;
                     self.finished = true;
+                    return Task::done(Message::Finished(self.sets));
                 } else {
                     self.remaining_time = Duration::from_secs(60) - passed_time;
                 }
             }
         }
+        Task::none()
     }
 
     pub fn view(&self) -> Element<'_, Message> {

@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs, io, time::Duration};
 
 use directories::ProjectDirs;
 use iced::{
-    Element, Length, Subscription,
+    Element, Length, Subscription, Task,
     widget::{self},
 };
 use serde::{Deserialize, Serialize};
@@ -138,41 +138,34 @@ impl App {
         }
     }
 
-    fn update(&mut self, message: Message) {
-        let current_screen = Screen::from(&self.state);
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::ChangeScreen(screen) => self.state = screen.into(),
             Message::ProjSet(projective::Message::Exit)
             | Message::ClassicSet(set::Message::Exit)
             | Message::TimedSet(timed::Message::Exit) => self.state = State::Menu,
+            Message::ProjSet(projective::Message::Finished(time))
+            | Message::ClassicSet(set::Message::Finished(time)) => {
+                self.userdata.add_time(Screen::from(&self.state), time)
+            }
+            Message::TimedSet(timed::Message::Finished(cards)) => {
+                self.userdata.add_cards(Screen::from(&self.state), cards)
+            }
             Message::ProjSet(message) if let State::ProjSet(projset) = &mut self.state => {
-                projset.update(message);
-                let final_time = projset.current_time - projset.start_time;
-                if projset.finished {
-                    self.userdata.add_time(current_screen, final_time);
-                }
+                return projset.update(message).map(Message::ProjSet);
             }
             Message::ClassicSet(message) if let State::ClassicSet(classicset) = &mut self.state => {
-                classicset.update(message);
-                let final_time = classicset.current_time - classicset.start_time;
-                if classicset.finished {
-                    self.userdata.add_time(current_screen, final_time);
-                }
+                return classicset.update(message).map(Message::ClassicSet);
             }
             Message::TimedSet(message) if let State::TimedSet(timedset) = &mut self.state => {
-                timedset.update(message);
-                if timedset.finished {
-                    self.userdata.add_cards(current_screen, timedset.sets);
-                }
+                return timedset.update(message).map(Message::TimedSet);
             }
             Message::TimedSet(message) if let State::TimedProj(timedproj) = &mut self.state => {
-                timedproj.update(message);
-                if timedproj.finished {
-                    self.userdata.add_cards(current_screen, timedproj.sets);
-                }
+                return timedproj.update(message).map(Message::TimedSet);
             }
             _ => (),
         }
+        Task::none()
     }
 
     fn view(&self) -> Element<'_, Message> {
