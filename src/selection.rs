@@ -48,18 +48,24 @@ impl Iterator for Selection {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.mask == 0 {
-            return None;
-        }
-
-        let pos = self.mask.trailing_zeros();
-        self.mask &= self.mask - 1;
-        Some(pos as u8)
+        self.mask.highest_one().map(|x| {
+            self.mask ^= 1 << x;
+            x as u8
+        })
     }
 }
 
 impl ExactSizeIterator for Selection {
     fn len(&self) -> usize {
         self.mask.count_ones() as usize
+    }
+}
+
+impl DoubleEndedIterator for Selection {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.mask.lowest_one().map(|x| {
+            self.mask ^= 1 << x;
+            x as u8
+        })
     }
 }

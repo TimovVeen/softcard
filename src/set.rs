@@ -128,7 +128,7 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
                         self.card_head += 1;
                     });
             } else {
-                for &card_idx in self.selection.into_iter().collect::<Vec<_>>().iter().rev() {
+                for card_idx in self.selection.into_iter() {
                     self.cards.remove(card_idx as usize);
                 }
             }
