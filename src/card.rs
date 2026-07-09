@@ -293,13 +293,13 @@ pub fn check_if_has_set<Card: CardDraw + Copy + Sum + Default + Eq>(
 }
 
 #[derive(Clone)]
-pub struct ShuffleDeck<C: Card> {
-    deck: std::vec::IntoIter<C>,
+pub struct ShuffleDeck<Card: CardGen> {
+    deck: std::vec::IntoIter<Card>,
 }
 
-impl<C: Card> Default for ShuffleDeck<C> {
+impl<Card: CardGen> Default for ShuffleDeck<Card> {
     fn default() -> Self {
-        let mut all_cards = C::all();
+        let mut all_cards = Card::all();
         fastrand::shuffle(&mut all_cards);
         Self {
             deck: all_cards.into_iter(),
@@ -307,19 +307,19 @@ impl<C: Card> Default for ShuffleDeck<C> {
     }
 }
 
-impl<C: Card> Iterator for ShuffleDeck<C> {
-    type Item = C;
+impl<Card: CardGen> Iterator for ShuffleDeck<Card> {
+    type Item = Card;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.deck.next()
     }
 }
 
-pub trait Card: CardDraw + Copy + Sum + Default + Eq {
+pub trait CardGen: CardDraw + Copy + Sum + Default + Eq {
     fn all() -> Vec<Self>;
 }
 
-impl Card for ClassicCard {
+impl CardGen for ClassicCard {
     fn all() -> Vec<Self> {
         iproduct!(0..3, 0..3, 0..3, 0..3)
             .map(|idxs| ClassicCard::new(idxs.into()))
@@ -327,7 +327,7 @@ impl Card for ClassicCard {
     }
 }
 
-impl Card for ProjCard {
+impl CardGen for ProjCard {
     fn all() -> Vec<Self> {
         from_fn::<_, 63, _>(|i| ProjCard::new(i as u8 + 1)).to_vec()
     }
