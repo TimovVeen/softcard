@@ -1,63 +1,20 @@
-use std::{array::from_fn, iter::Sum, ops::Add};
+use std::{iter::Sum, ops::Add};
 
 use iced::{
-    Border, Color, Element, Length, Point, Rectangle, Renderer, Size, Theme,
+    Color, Point, Renderer, Size,
     border::Radius,
-    color, mouse,
-    widget::{
-        canvas::{
-            self, Cache, Path, Stroke,
-            path::{
-                Builder,
-                lyon_path::geom::euclid::{Transform2D, Vector2D},
-            },
+    color,
+    widget::canvas::{
+        self, Path, Stroke,
+        path::{
+            Builder,
+            lyon_path::geom::euclid::{Transform2D, Vector2D},
         },
-        container, mouse_area,
     },
 };
-use itertools::{Itertools, iproduct};
+use itertools::iproduct;
 
-const DOT_RADIUS_RATIO: f32 = 0.15;
-
-const CARD_COLORS: [Color; 6] = [
-    color!(0xFF0000),
-    color!(0xFFA500),
-    color!(0xFFD700),
-    color!(0x008000),
-    color!(0x0000FF),
-    color!(0x800080),
-];
-
-#[derive(Debug, Clone)]
-pub enum Message {
-    Toggle,
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct ProjCard {
-    pub mask: u8,
-}
-
-impl Add for ProjCard {
-    type Output = Self;
-
-    #[allow(clippy::suspicious_arithmetic_impl)]
-    fn add(self, rhs: Self) -> Self::Output {
-        Self::Output::new(self.mask ^ rhs.mask)
-    }
-}
-
-impl Sum for ProjCard {
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(Self::default(), Self::add)
-    }
-}
-
-impl ProjCard {
-    pub const fn new(mask: u8) -> Self {
-        Self { mask }
-    }
-}
+use crate::cards::card::{CardDraw, CardGen};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct ClassicCard {
@@ -85,96 +42,6 @@ impl Add for ClassicCard {
 impl Sum for ClassicCard {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(Self::default(), Self::add)
-    }
-}
-
-pub struct CardCanvas<Card: CardDraw> {
-    card: Card,
-    cache: Cache,
-}
-
-impl<Card: CardDraw> CardCanvas<Card> {
-    pub fn new(card: Card) -> Self {
-        Self {
-            card,
-            cache: Cache::new(),
-        }
-    }
-
-    pub fn set_card(&mut self, card: Card) {
-        self.card = card;
-        self.cache.clear();
-    }
-
-    pub fn get_card(&self) -> &Card {
-        &self.card
-    }
-
-    pub fn view(&self, selected: bool) -> Element<'_, Message> {
-        let card = container(
-            canvas::Canvas::new(self)
-                .width(Length::Fill)
-                .height(Length::Fill),
-        )
-        .style(move |_theme| container::Style {
-            background: Some(
-                if selected {
-                    color!(0x71777F)
-                } else {
-                    Color::WHITE
-                }
-                .into(),
-            ),
-            border: Border {
-                color: Color::BLACK,
-                width: 1.5,
-                radius: 10.0.into(),
-            },
-            ..Default::default()
-        });
-
-        mouse_area(card).on_press(Message::Toggle).into()
-    }
-}
-
-impl<Message, Card: CardDraw> canvas::Program<Message> for CardCanvas<Card> {
-    type State = ();
-
-    fn draw(
-        &self,
-        _state: &Self::State,
-        renderer: &Renderer,
-        _theme: &Theme,
-        bounds: Rectangle,
-        _cursor: mouse::Cursor,
-    ) -> Vec<canvas::Geometry> {
-        let card = self
-            .cache
-            .draw(renderer, bounds.size(), |frame| self.card.draw(frame));
-
-        vec![card]
-    }
-}
-
-pub trait CardDraw {
-    fn draw(&self, frame: &mut canvas::Frame<Renderer>);
-}
-
-impl CardDraw for ProjCard {
-    fn draw(&self, frame: &mut canvas::Frame<Renderer>) {
-        let radius = frame.width() * DOT_RADIUS_RATIO;
-        for (row, y) in [0.18333334, 0.48333335, 0.78333336].iter().enumerate() {
-            for (col, x) in [0.275, 0.725].iter().enumerate() {
-                let idx = row * 2 + col;
-                if self.mask & (1 << idx) == 0 {
-                    continue;
-                }
-
-                let center = Point::new(frame.width() * x, frame.height() * y);
-                let dot = Path::circle(center, radius);
-                frame.fill(&dot, CARD_COLORS[idx]);
-            }
-        }
     }
 }
 
@@ -284,51 +151,10 @@ impl CardDraw for ClassicCard {
     }
 }
 
-pub fn check_if_has_set<Card: CardDraw + Copy + Sum + Default + Eq>(
-    cards: &[CardCanvas<Card>],
-) -> bool {
-    (0..cards.len())
-        .array_combinations::<3>()
-        .any(|idxs| Card::default() == idxs.map(|i| *cards[i].get_card()).into_iter().sum())
-}
-
-#[derive(Clone)]
-pub struct ShuffleDeck<Card: CardGen> {
-    deck: std::vec::IntoIter<Card>,
-}
-
-impl<Card: CardGen> Default for ShuffleDeck<Card> {
-    fn default() -> Self {
-        let mut all_cards = Card::all();
-        fastrand::shuffle(&mut all_cards);
-        Self {
-            deck: all_cards.into_iter(),
-        }
-    }
-}
-
-impl<Card: CardGen> Iterator for ShuffleDeck<Card> {
-    type Item = Card;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.deck.next()
-    }
-}
-
-pub trait CardGen: CardDraw + Copy + Sum + Default + Eq {
-    fn all() -> Vec<Self>;
-}
-
 impl CardGen for ClassicCard {
     fn all() -> Vec<Self> {
         iproduct!(0..3, 0..3, 0..3, 0..3)
             .map(|idxs| ClassicCard::new(idxs.into()))
             .collect()
-    }
-}
-
-impl CardGen for ProjCard {
-    fn all() -> Vec<Self> {
-        from_fn::<_, 63, _>(|i| ProjCard::new(i as u8 + 1)).to_vec()
     }
 }

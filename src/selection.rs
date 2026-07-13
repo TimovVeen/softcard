@@ -1,6 +1,6 @@
 use std::iter::Sum;
 
-use crate::card::{CardCanvas, CardDraw};
+use crate::cards::card::{CardCanvas, CardDraw};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Selection {

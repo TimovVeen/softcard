@@ -14,7 +14,7 @@ use log::info;
 
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
-    card::{self, CardCanvas, CardDraw, check_if_has_set},
+    cards::card::{self, CardCanvas, CardDraw, check_if_has_set},
     selection::Selection,
 };
 

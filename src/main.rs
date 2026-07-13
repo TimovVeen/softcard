@@ -5,17 +5,17 @@ use iced::{
 use log::error;
 use serde::{Deserialize, Serialize};
 
-mod card;
-mod projective;
+mod cards;
+mod games;
 mod selection;
-mod set;
-mod timed;
 mod userdata;
 use crate::{
-    card::{ClassicCard, ProjCard, ShuffleDeck},
-    projective::ProjSet,
-    set::ClassicSet,
-    timed::TimedSet,
+    cards::{deck::ShuffleDeck, projective::ProjCard, set::ClassicCard},
+    games::{
+        projective::{self, ProjSet},
+        set::{self, ClassicSet},
+        timed::{self, TimedSet},
+    },
     userdata::UserData,
 };
 

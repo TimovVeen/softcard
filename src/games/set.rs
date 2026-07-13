@@ -5,9 +5,10 @@ use iced::{
 };
 use log::info;
 
+use crate::ClassicCard;
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
-    card::{self, CardCanvas, ClassicCard, check_if_has_set},
+    cards::card::{self, CardCanvas, check_if_has_set},
     selection::Selection,
 };
 

@@ -7,9 +7,10 @@ use iced::{
 };
 use log::info;
 
+use crate::ProjCard;
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
-    card::{self, CardCanvas, ProjCard},
+    cards::card::{self, CardCanvas},
     selection::Selection,
 };
 
