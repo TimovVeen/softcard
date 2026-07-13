@@ -1,13 +1,15 @@
 use std::iter::Sum;
 
 use iced::{
-    Border, Color, Element, Fill, Rectangle, Renderer, Theme, color, mouse,
+    Border, Color, Fill, Rectangle, Renderer, Theme, color, mouse,
     widget::{
         canvas::{self, Cache},
         container, mouse_area,
     },
 };
 use itertools::Itertools;
+
+use crate::gui::Element;
 
 #[derive(Debug, Clone)]
 pub enum Message {

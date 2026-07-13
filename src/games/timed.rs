@@ -6,7 +6,7 @@ use std::{
 };
 
 use iced::{
-    Element, Function, Subscription, Task,
+    Function, Subscription, Task,
     time::{self, Instant, milliseconds},
     widget::{self, container, grid, responsive},
 };
@@ -15,6 +15,7 @@ use log::info;
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
     cards::card::{self, CardCanvas, CardDraw, check_if_has_set},
+    gui::Element,
     selection::Selection,
 };
 

@@ -1,18 +1,18 @@
 use std::array::from_fn;
 
 use iced::{
-    Border, Color, Element, Fill, Function, Subscription, Task, keyboard,
+    Border, Color, Fill, Function, Subscription, Task, keyboard,
     time::{self, Duration, Instant, milliseconds},
     widget::{self, container, grid, responsive},
 };
 use log::info;
 
-use crate::ProjCard;
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
     cards::card::{self, CardCanvas},
     selection::Selection,
 };
+use crate::{ProjCard, gui::Element};
 
 #[derive(Debug, Clone)]
 pub enum Message {

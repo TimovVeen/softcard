@@ -1,16 +1,16 @@
 use iced::{
-    Element, Function, Subscription, Task,
+    Function, Subscription, Task,
     time::{self, Duration, Instant, milliseconds},
     widget::{self, container, grid, responsive},
 };
 use log::info;
 
-use crate::ClassicCard;
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
     cards::card::{self, CardCanvas, check_if_has_set},
     selection::Selection,
 };
+use crate::{ClassicCard, gui::Element};
 
 #[derive(Debug, Clone)]
 pub enum Message {

@@ -1,5 +1,5 @@
 use iced::{
-    Element, Length, Subscription, Task,
+    Length, Subscription, Task,
     widget::{self},
 };
 use log::error;
@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 mod cards;
 mod games;
+mod gui;
 mod selection;
 mod userdata;
 use crate::{
@@ -16,6 +17,7 @@ use crate::{
         set::{self, ClassicSet},
         timed::{self, TimedSet},
     },
+    gui::Element,
     userdata::UserData,
 };
 
