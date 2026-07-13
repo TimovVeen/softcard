@@ -38,7 +38,7 @@ impl Selection {
         cards: &[CardCanvas<Card>],
     ) -> bool {
         self.into_iter()
-            .map(|i| cards[i as usize].get_card())
+            .map(|i| *cards[i as usize].get_card())
             .sum::<Card>()
             == Card::default()
     }

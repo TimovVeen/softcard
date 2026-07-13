@@ -88,12 +88,12 @@ impl Sum for ClassicCard {
     }
 }
 
-pub struct CardCanvas<Card: CardDraw + Copy> {
+pub struct CardCanvas<Card: CardDraw> {
     card: Card,
     cache: Cache,
 }
 
-impl<Card: CardDraw + Copy> CardCanvas<Card> {
+impl<Card: CardDraw> CardCanvas<Card> {
     pub fn new(card: Card) -> Self {
         Self {
             card,
@@ -106,8 +106,8 @@ impl<Card: CardDraw + Copy> CardCanvas<Card> {
         self.cache.clear();
     }
 
-    pub fn get_card(&self) -> Card {
-        self.card
+    pub fn get_card(&self) -> &Card {
+        &self.card
     }
 
     pub fn view(&self, selected: bool) -> Element<'_, Message> {
@@ -137,7 +137,7 @@ impl<Card: CardDraw + Copy> CardCanvas<Card> {
     }
 }
 
-impl<Message, Card: CardDraw + Copy> canvas::Program<Message> for CardCanvas<Card> {
+impl<Message, Card: CardDraw> canvas::Program<Message> for CardCanvas<Card> {
     type State = ();
 
     fn draw(
@@ -289,7 +289,7 @@ pub fn check_if_has_set<Card: CardDraw + Copy + Sum + Default + Eq>(
 ) -> bool {
     (0..cards.len())
         .array_combinations::<3>()
-        .any(|idxs| Card::default() == idxs.map(|i| cards[i].get_card()).into_iter().sum())
+        .any(|idxs| Card::default() == idxs.map(|i| *cards[i].get_card()).into_iter().sum())
 }
 
 #[derive(Clone)]

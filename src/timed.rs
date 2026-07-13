@@ -158,8 +158,10 @@ impl<
     }
 }
 
-fn has_card<Card: CardDraw + Copy + Eq>(cards: &[CardCanvas<Card>], card: Card) -> bool {
-    cards.iter().any(|cardcanvas| cardcanvas.get_card() == card)
+fn has_card<Card: CardDraw + Eq>(cards: &[CardCanvas<Card>], card: Card) -> bool {
+    cards
+        .iter()
+        .any(|cardcanvas| *cardcanvas.get_card() == card)
 }
 
 impl<
