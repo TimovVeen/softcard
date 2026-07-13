@@ -1,7 +1,7 @@
 use std::array::from_fn;
 
 use iced::{
-    Border, Color, Element, Function, Length, Subscription, Task, keyboard,
+    Border, Color, Element, Fill, Function, Subscription, Task, keyboard,
     time::{self, Duration, Instant, milliseconds},
     widget::{self, container, grid, responsive},
 };
@@ -73,10 +73,8 @@ impl<Deck: Iterator<Item = ProjCard> + Default> ProjSet<Deck> {
             let buttons = widget::row![
                 widget::button("Restart")
                     .on_press(Message::Restart)
-                    .width(Length::Fill),
-                widget::button("Menu")
-                    .on_press(Message::Exit)
-                    .width(Length::Fill),
+                    .width(Fill),
+                widget::button("Menu").on_press(Message::Exit).width(Fill),
             ]
             .spacing(5.);
 

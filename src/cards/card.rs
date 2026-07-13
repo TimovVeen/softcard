@@ -1,7 +1,7 @@
 use std::iter::Sum;
 
 use iced::{
-    Border, Color, Element, Length, Rectangle, Renderer, Theme, color, mouse,
+    Border, Color, Element, Fill, Rectangle, Renderer, Theme, color, mouse,
     widget::{
         canvas::{self, Cache},
         container, mouse_area,
@@ -37,27 +37,25 @@ impl<Card: CardDraw> CardCanvas<Card> {
     }
 
     pub fn view(&self, selected: bool) -> Element<'_, Message> {
-        let card = container(
-            canvas::Canvas::new(self)
-                .width(Length::Fill)
-                .height(Length::Fill),
-        )
-        .style(move |_theme| container::Style {
-            background: Some(
-                if selected {
-                    color!(0x71777F)
-                } else {
-                    Color::WHITE
+        let card =
+            container(canvas::Canvas::new(self).width(Fill).height(Fill)).style(move |_theme| {
+                container::Style {
+                    background: Some(
+                        if selected {
+                            color!(0x71777F)
+                        } else {
+                            Color::WHITE
+                        }
+                        .into(),
+                    ),
+                    border: Border {
+                        color: Color::BLACK,
+                        width: 1.5,
+                        radius: 10.0.into(),
+                    },
+                    ..Default::default()
                 }
-                .into(),
-            ),
-            border: Border {
-                color: Color::BLACK,
-                width: 1.5,
-                radius: 10.0.into(),
-            },
-            ..Default::default()
-        });
+            });
 
         mouse_area(card).on_press(Message::Toggle).into()
     }
