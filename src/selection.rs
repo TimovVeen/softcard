@@ -69,3 +69,45 @@ impl DoubleEndedIterator for Selection {
         })
     }
 }
+
+#[derive(Clone, Debug, Default)]
+pub struct OrderedSelection {
+    pub selection: Vec<usize>,
+}
+
+impl OrderedSelection {
+    pub fn toggle(&mut self, index: u8) {
+        if let Some(i) = self.selection.iter().position(|x| *x == index as usize) {
+            self.selection.remove(i);
+        } else {
+            self.selection.push(index as usize);
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.selection.clear();
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.selection.is_empty()
+    }
+
+    pub fn is_selected(&self, index: u8) -> bool {
+        self.selection.contains(&(index as usize))
+    }
+
+    pub fn len(&self) -> usize {
+        self.selection.len()
+    }
+
+    pub fn check_set<Card: CardDraw + Copy + Default + Sum + Eq>(
+        &self,
+        cards: &[CardCanvas<Card>],
+    ) -> bool {
+        self.selection
+            .iter()
+            .map(|&i| *cards[i].get_card())
+            .sum::<Card>()
+            == Card::default()
+    }
+}

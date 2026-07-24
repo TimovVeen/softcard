@@ -11,10 +11,11 @@ mod gui;
 mod selection;
 mod userdata;
 use crate::{
-    cards::{deck::ShuffleDeck, projective::ProjCard, set::ClassicCard},
+    cards::{deck::ShuffleDeck, projective::ProjCard, set::ClassicCard, symmetric::SymCard},
     games::{
         projective::{self, ProjSet},
         set::{self, ClassicSet},
+        symmetric::{self, SymSet},
         timed::{self, TimedSet},
     },
     gui::Element,
@@ -34,6 +35,7 @@ enum State {
     ClassicSet(ClassicSet<ShuffleDeck<ClassicCard>>),
     TimedSet(TimedSet<ClassicCard, ShuffleDeck<ClassicCard>>),
     TimedProj(TimedSet<ProjCard, ShuffleDeck<ProjCard>>),
+    SymSet(SymSet<ShuffleDeck<SymCard<4>>>),
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
@@ -43,6 +45,7 @@ enum Screen {
     ClassicSet,
     TimedSet,
     TimedProj,
+    SymSet,
 }
 
 impl From<Screen> for State {
@@ -53,6 +56,7 @@ impl From<Screen> for State {
             Screen::ClassicSet => State::ClassicSet(ClassicSet::default()),
             Screen::TimedSet => State::TimedSet(TimedSet::default()),
             Screen::TimedProj => State::TimedProj(TimedSet::default()),
+            Screen::SymSet => State::SymSet(SymSet::default()),
         }
     }
 }
@@ -65,6 +69,7 @@ impl From<&State> for Screen {
             State::ClassicSet(_) => Screen::ClassicSet,
             State::TimedSet(_) => Screen::TimedSet,
             State::TimedProj(_) => Screen::TimedProj,
+            State::SymSet(_) => Screen::SymSet,
         }
     }
 }
@@ -77,6 +82,7 @@ enum Message {
     ProjSet(projective::Message),
     ClassicSet(set::Message),
     TimedSet(timed::Message),
+    SymSet(symmetric::Message),
 }
 
 #[derive(Default)]
@@ -100,9 +106,11 @@ impl App {
             Message::Error(Err(e)) => error!("{e}"),
             Message::ProjSet(projective::Message::Exit)
             | Message::ClassicSet(set::Message::Exit)
-            | Message::TimedSet(timed::Message::Exit) => self.state = State::Menu,
+            | Message::TimedSet(timed::Message::Exit)
+            | Message::SymSet(symmetric::Message::Exit) => self.state = State::Menu,
             Message::ProjSet(projective::Message::Finished(time))
-            | Message::ClassicSet(set::Message::Finished(time)) => {
+            | Message::ClassicSet(set::Message::Finished(time))
+            | Message::SymSet(symmetric::Message::Finished(time)) => {
                 return self
                     .userdata
                     .add_time(Screen::from(&self.state), time)
@@ -127,6 +135,9 @@ impl App {
             }
             Message::TimedSet(message) if let State::TimedProj(timedproj) = &mut self.state => {
                 return timedproj.update(message).map(Message::TimedSet);
+            }
+            Message::SymSet(message) if let State::SymSet(symset) = &mut self.state => {
+                return symset.update(message).map(Message::SymSet);
             }
             _ => (),
         }
@@ -173,6 +184,15 @@ impl App {
                 ))
                 .on_press(Message::ChangeScreen(Screen::TimedProj))
                 .width(Length::Fixed(160.)),
+                widget::button(widget::text!(
+                    "Permutation Set\nBest time: {}",
+                    self.userdata
+                        .best_times
+                        .get(&Screen::SymSet)
+                        .map_or("None".to_string(), |time| format!("{}s", time.as_secs()))
+                ))
+                .on_press(Message::ChangeScreen(Screen::SymSet))
+                .width(Length::Fixed(160.)),
             ]
             .spacing(5.)
             .padding(20.)
@@ -181,6 +201,7 @@ impl App {
             State::ClassicSet(classicset) => classicset.view().map(Message::ClassicSet),
             State::TimedSet(timedset) => timedset.view().map(Message::TimedSet),
             State::TimedProj(timedproj) => timedproj.view().map(Message::TimedSet),
+            State::SymSet(symset) => symset.view().map(Message::SymSet),
         }
     }
 
@@ -191,6 +212,7 @@ impl App {
             State::ClassicSet(classicset) => classicset.subscription().map(Message::ClassicSet),
             State::TimedSet(timedset) => timedset.subscription().map(Message::TimedSet),
             State::TimedProj(timedproj) => timedproj.subscription().map(Message::TimedSet),
+            State::SymSet(symset) => symset.subscription().map(Message::SymSet),
         }
     }
 }
