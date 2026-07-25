@@ -11,12 +11,16 @@ mod gui;
 mod selection;
 mod userdata;
 use crate::{
-    cards::{deck::ShuffleDeck, projective::ProjCard, set::ClassicCard, symmetric::SymCard},
+    cards::{
+        deck::ShuffleDeck, projective::ProjCard, set::ClassicCard, symmetric::SymCard,
+        wreath::WreathCard,
+    },
     games::{
         projective::{self, ProjSet},
         set::{self, ClassicSet},
         symmetric::{self, SymSet},
         timed::{self, TimedSet},
+        wreath::{self, WreathSet},
     },
     gui::Element,
     userdata::UserData,
@@ -36,6 +40,7 @@ enum State {
     TimedSet(TimedSet<ClassicCard, ShuffleDeck<ClassicCard>>),
     TimedProj(TimedSet<ProjCard, ShuffleDeck<ProjCard>>),
     SymSet(SymSet<ShuffleDeck<SymCard<4>>>),
+    WreathSet(WreathSet<ShuffleDeck<WreathCard<3>>>),
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
@@ -46,6 +51,7 @@ enum Screen {
     TimedSet,
     TimedProj,
     SymSet,
+    WreathSet,
 }
 
 impl From<Screen> for State {
@@ -57,6 +63,7 @@ impl From<Screen> for State {
             Screen::TimedSet => State::TimedSet(TimedSet::default()),
             Screen::TimedProj => State::TimedProj(TimedSet::default()),
             Screen::SymSet => State::SymSet(SymSet::default()),
+            Screen::WreathSet => State::WreathSet(WreathSet::default()),
         }
     }
 }
@@ -70,6 +77,7 @@ impl From<&State> for Screen {
             State::TimedSet(_) => Screen::TimedSet,
             State::TimedProj(_) => Screen::TimedProj,
             State::SymSet(_) => Screen::SymSet,
+            State::WreathSet(_) => Screen::WreathSet,
         }
     }
 }
@@ -83,6 +91,7 @@ enum Message {
     ClassicSet(set::Message),
     TimedSet(timed::Message),
     SymSet(symmetric::Message),
+    WreathSet(wreath::Message),
 }
 
 #[derive(Default)]
@@ -107,10 +116,12 @@ impl App {
             Message::ProjSet(projective::Message::Exit)
             | Message::ClassicSet(set::Message::Exit)
             | Message::TimedSet(timed::Message::Exit)
-            | Message::SymSet(symmetric::Message::Exit) => self.state = State::Menu,
+            | Message::SymSet(symmetric::Message::Exit)
+            | Message::WreathSet(wreath::Message::Exit) => self.state = State::Menu,
             Message::ProjSet(projective::Message::Finished(time))
             | Message::ClassicSet(set::Message::Finished(time))
-            | Message::SymSet(symmetric::Message::Finished(time)) => {
+            | Message::SymSet(symmetric::Message::Finished(time))
+            | Message::WreathSet(wreath::Message::Finished(time)) => {
                 return self
                     .userdata
                     .add_time(Screen::from(&self.state), time)
@@ -138,6 +149,9 @@ impl App {
             }
             Message::SymSet(message) if let State::SymSet(symset) = &mut self.state => {
                 return symset.update(message).map(Message::SymSet);
+            }
+            Message::WreathSet(message) if let State::WreathSet(wreathset) = &mut self.state => {
+                return wreathset.update(message).map(Message::WreathSet);
             }
             _ => (),
         }
@@ -193,6 +207,15 @@ impl App {
                 ))
                 .on_press(Message::ChangeScreen(Screen::SymSet))
                 .width(Length::Fixed(160.)),
+                widget::button(widget::text!(
+                    "Wreath Set\nBest time: {}",
+                    self.userdata
+                        .best_times
+                        .get(&Screen::WreathSet)
+                        .map_or("None".to_string(), |time| format!("{}s", time.as_secs()))
+                ))
+                .on_press(Message::ChangeScreen(Screen::WreathSet))
+                .width(Length::Fixed(160.)),
             ]
             .spacing(5.)
             .padding(20.)
@@ -202,6 +225,7 @@ impl App {
             State::TimedSet(timedset) => timedset.view().map(Message::TimedSet),
             State::TimedProj(timedproj) => timedproj.view().map(Message::TimedSet),
             State::SymSet(symset) => symset.view().map(Message::SymSet),
+            State::WreathSet(wreathset) => wreathset.view().map(Message::WreathSet),
         }
     }
 
@@ -213,6 +237,7 @@ impl App {
             State::TimedSet(timedset) => timedset.subscription().map(Message::TimedSet),
             State::TimedProj(timedproj) => timedproj.subscription().map(Message::TimedSet),
             State::SymSet(symset) => symset.subscription().map(Message::SymSet),
+            State::WreathSet(wreathset) => wreathset.subscription().map(Message::WreathSet),
         }
     }
 }
