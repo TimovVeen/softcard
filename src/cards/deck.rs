@@ -7,7 +7,7 @@ pub struct ShuffleDeck<Card: CardGen> {
 
 impl<Card: CardGen> Default for ShuffleDeck<Card> {
     fn default() -> Self {
-        let mut all_cards = Card::all();
+        let mut all_cards = Card::all().collect::<Vec<_>>();
         fastrand::shuffle(&mut all_cards);
         Self {
             deck: all_cards.into_iter(),

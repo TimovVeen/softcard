@@ -19,16 +19,14 @@ const CARD_COLORS: [Color; 6] = [
 ];
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct ProjCard {
-    pub mask: u8,
-}
+pub struct ProjCard(u8);
 
 impl Add for ProjCard {
     type Output = Self;
 
     #[allow(clippy::suspicious_arithmetic_impl)]
     fn add(self, rhs: Self) -> Self::Output {
-        Self::Output::new(self.mask ^ rhs.mask)
+        Self::Output::new(self.0 ^ rhs.0)
     }
 }
 
@@ -40,7 +38,7 @@ impl Sum for ProjCard {
 
 impl ProjCard {
     pub const fn new(mask: u8) -> Self {
-        Self { mask }
+        Self(mask)
     }
 }
 
@@ -50,7 +48,7 @@ impl CardDraw for ProjCard {
         for (row, y) in [0.18333334, 0.48333335, 0.78333336].iter().enumerate() {
             for (col, x) in [0.275, 0.725].iter().enumerate() {
                 let idx = row * 2 + col;
-                if self.mask & (1 << idx) == 0 {
+                if self.0 & (1 << idx) == 0 {
                     continue;
                 }
 
@@ -63,7 +61,7 @@ impl CardDraw for ProjCard {
 }
 
 impl CardGen for ProjCard {
-    fn all() -> Vec<Self> {
-        from_fn::<_, 63, _>(|i| ProjCard::new(i as u8 + 1)).to_vec()
+    fn all() -> impl Iterator<Item = Self> {
+        from_fn::<_, 63, _>(|i| ProjCard::new(i as u8 + 1)).into_iter()
     }
 }

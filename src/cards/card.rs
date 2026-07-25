@@ -95,5 +95,5 @@ pub fn check_if_has_set<Card: CardDraw + Copy + Sum + Default + Eq>(
 }
 
 pub trait CardGen: Sized {
-    fn all() -> Vec<Self>;
+    fn all() -> impl Iterator<Item = Self>;
 }
