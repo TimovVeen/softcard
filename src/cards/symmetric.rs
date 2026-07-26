@@ -2,7 +2,7 @@ use std::{array::from_fn, iter::Sum, ops::Add};
 
 use iced::{
     Color, Point, Renderer,
-    widget::canvas::{self, Path, Stroke},
+    widget::canvas::{self, Path, Stroke, path::Builder},
 };
 use itertools::Itertools;
 
@@ -53,22 +53,30 @@ impl<const N: usize> SymCard<N> {
 impl<const N: usize> CardDraw for SymCard<N> {
     fn draw(&self, frame: &mut canvas::Frame<Renderer>) {
         let step = 0.7 / (N as f32 - 1.);
+        let mut lines = Builder::new();
         for (start, &end) in self.0.iter().enumerate() {
-            frame.stroke(
-                &Path::line(
-                    Point::new(0., (0.1 + step * start as f32) * frame.height()),
-                    Point::new(frame.width(), (0.1 + step * end as f32) * frame.height()),
-                ),
-                Stroke::default(),
+            let start_y = (0.1 + step * start as f32) * frame.height();
+            let end_y = (0.1 + step * end as f32) * frame.height();
+            lines.move_to(Point::new(0., start_y));
+            lines.line_to(Point::new(0.1 * frame.width(), start_y));
+            lines.bezier_curve_to(
+                Point::new(0.5 * frame.width(), start_y),
+                Point::new(0.5 * frame.width(), end_y),
+                Point::new(0.9 * frame.width(), end_y),
             );
+            lines.line_to(Point::new(frame.width(), end_y));
         }
 
+        frame.stroke(&lines.build(), Stroke::default());
+
         if self.odd_parity() {
-            let dot = Path::circle(
-                Point::new(frame.width() * 0.5, frame.height()),
-                frame.width() * 0.1,
+            frame.fill(
+                &Path::circle(
+                    Point::new(frame.width() * 0.5, frame.height()),
+                    frame.width() * 0.1,
+                ),
+                Color::BLACK,
             );
-            frame.fill(&dot, Color::BLACK);
         }
     }
 }

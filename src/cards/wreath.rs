@@ -67,10 +67,10 @@ impl<const N: usize> CardDraw for WreathCard<N> {
                 frame.fill(
                     &Path::circle(
                         Point::new(
-                            0.1 * frame.width(),
+                            0.075 * frame.width(),
                             (0.1 + step * start as f32) * frame.height(),
                         ),
-                        0.07 * frame.width(),
+                        0.05 * frame.width(),
                     ),
                     Color::BLACK,
                 );
