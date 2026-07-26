@@ -85,10 +85,10 @@ impl<const N: usize> CardGen for WreathCard<N> {
         iproduct!(
             (0..N as u8)
                 .permutations(N)
-                .map(|x| x.iter().copied().collect_array::<N>().unwrap()),
+                .map(|x| x.iter().copied().collect_array().unwrap()),
             repeat_n([false, true], N)
                 .multi_cartesian_product()
-                .map(|x| x.iter().copied().collect_array::<N>().unwrap())
+                .map(|x| x.iter().copied().collect_array().unwrap())
         )
         .map(|(perm, mask)| Self::new(perm, mask))
         .skip(1)

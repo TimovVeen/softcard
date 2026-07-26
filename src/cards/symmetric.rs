@@ -85,7 +85,7 @@ impl<const N: usize> CardGen for SymCard<N> {
     fn all() -> impl Iterator<Item = Self> {
         (0..N as u8)
             .permutations(N)
-            .map(|x| Self::new(x.iter().copied().collect_array::<N>().unwrap()))
+            .map(|x| Self::new(x.iter().copied().collect_array().unwrap()))
             .skip(1)
     }
 }
