@@ -28,7 +28,7 @@ pub enum Message {
 }
 
 pub struct SymSet<Deck: Iterator<Item = SymCard<4>> + Default> {
-    cards: [CardCanvas<SymCard<4>>; 5],
+    cards: [CardCanvas<SymCard<4>>; 7],
     all_cards: Deck,
     selection: OrderedSelection,
     card_head: usize,
@@ -45,7 +45,7 @@ impl<Deck: Iterator<Item = SymCard<4>> + Default> SymSet<Deck> {
             cards: from_fn(|_| CardCanvas::new(all_cards.next().unwrap())),
             all_cards,
             selection: OrderedSelection::default(),
-            card_head: 5,
+            card_head: 7,
             finished: false,
             start_time: Instant::now(),
             current_time: Instant::now(),
@@ -116,7 +116,7 @@ impl<Deck: Iterator<Item = SymCard<4>> + Default> SymSet<Deck> {
                     .map(Message::Card.with(i as u8))
             }))
             .push(stats)
-            .columns(5)
+            .columns(7)
             .spacing(GRID_SPACING)
             .width(size.width.min(expected_width))
             .height(grid::Sizing::AspectRatio(CARD_ASPECT))
