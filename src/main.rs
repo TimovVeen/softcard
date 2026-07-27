@@ -16,13 +16,12 @@ use crate::{
         wreath::WreathCard,
     },
     games::{
-        projective::{self, ProjSet},
+        fixed::{self, FixedSet},
         set::{self, ClassicSet},
-        symmetric::{self, SymSet},
         timed::{self, TimedSet},
-        wreath::{self, WreathSet},
     },
     gui::Element,
+    selection::{OrderedSelection, Selection},
     userdata::UserData,
 };
 
@@ -35,12 +34,12 @@ pub const CARD_ASPECT: f32 = 2. / 3.;
 enum State {
     #[default]
     Menu,
-    ProjSet(ProjSet<ShuffleDeck<ProjCard>>),
+    ProjSet(FixedSet<ShuffleDeck<ProjCard>, ProjCard, Selection, 7, 63>),
     ClassicSet(ClassicSet<ShuffleDeck<ClassicCard>>),
     TimedSet(TimedSet<ClassicCard, ShuffleDeck<ClassicCard>>),
     TimedProj(TimedSet<ProjCard, ShuffleDeck<ProjCard>>),
-    SymSet(SymSet<ShuffleDeck<SymCard<4>>>),
-    WreathSet(WreathSet<ShuffleDeck<WreathCard<3>>>),
+    SymSet(FixedSet<ShuffleDeck<SymCard<4>>, SymCard<4>, OrderedSelection, 7, 23>),
+    WreathSet(FixedSet<ShuffleDeck<WreathCard<3>>, WreathCard<3>, OrderedSelection, 6, 47>),
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
@@ -58,12 +57,12 @@ impl From<Screen> for State {
     fn from(screen: Screen) -> Self {
         match screen {
             Screen::Menu => State::Menu,
-            Screen::ProjSet => State::ProjSet(ProjSet::default()),
+            Screen::ProjSet => State::ProjSet(FixedSet::default()),
             Screen::ClassicSet => State::ClassicSet(ClassicSet::default()),
             Screen::TimedSet => State::TimedSet(TimedSet::default()),
             Screen::TimedProj => State::TimedProj(TimedSet::default()),
-            Screen::SymSet => State::SymSet(SymSet::default()),
-            Screen::WreathSet => State::WreathSet(WreathSet::default()),
+            Screen::SymSet => State::SymSet(FixedSet::default()),
+            Screen::WreathSet => State::WreathSet(FixedSet::default()),
         }
     }
 }
@@ -87,11 +86,11 @@ enum Message {
     ChangeScreen(Screen),
     Error(Result<(), String>),
     UserDataRead(Option<UserData>),
-    ProjSet(projective::Message),
+    ProjSet(fixed::Message),
     ClassicSet(set::Message),
     TimedSet(timed::Message),
-    SymSet(symmetric::Message),
-    WreathSet(wreath::Message),
+    SymSet(fixed::Message),
+    WreathSet(fixed::Message),
 }
 
 #[derive(Default)]
@@ -113,15 +112,15 @@ impl App {
             Message::ChangeScreen(screen) => self.state = screen.into(),
             Message::UserDataRead(Some(userdata)) => self.userdata = userdata,
             Message::Error(Err(e)) => error!("{e}"),
-            Message::ProjSet(projective::Message::Exit)
+            Message::ProjSet(fixed::Message::Exit)
             | Message::ClassicSet(set::Message::Exit)
             | Message::TimedSet(timed::Message::Exit)
-            | Message::SymSet(symmetric::Message::Exit)
-            | Message::WreathSet(wreath::Message::Exit) => self.state = State::Menu,
-            Message::ProjSet(projective::Message::Finished(time))
+            | Message::SymSet(fixed::Message::Exit)
+            | Message::WreathSet(fixed::Message::Exit) => self.state = State::Menu,
+            Message::ProjSet(fixed::Message::Finished(time))
             | Message::ClassicSet(set::Message::Finished(time))
-            | Message::SymSet(symmetric::Message::Finished(time))
-            | Message::WreathSet(wreath::Message::Finished(time)) => {
+            | Message::SymSet(fixed::Message::Finished(time))
+            | Message::WreathSet(fixed::Message::Finished(time)) => {
                 return self
                     .userdata
                     .add_time(Screen::from(&self.state), time)
@@ -220,12 +219,12 @@ impl App {
             .spacing(5.)
             .padding(20.)
             .into(),
-            State::ProjSet(projset) => projset.view().map(Message::ProjSet),
+            State::ProjSet(projset) => projset.view(4).map(Message::ProjSet),
             State::ClassicSet(classicset) => classicset.view().map(Message::ClassicSet),
             State::TimedSet(timedset) => timedset.view().map(Message::TimedSet),
             State::TimedProj(timedproj) => timedproj.view().map(Message::TimedSet),
-            State::SymSet(symset) => symset.view().map(Message::SymSet),
-            State::WreathSet(wreathset) => wreathset.view().map(Message::WreathSet),
+            State::SymSet(symset) => symset.view(7).map(Message::SymSet),
+            State::WreathSet(wreathset) => wreathset.view(6).map(Message::WreathSet),
         }
     }
 

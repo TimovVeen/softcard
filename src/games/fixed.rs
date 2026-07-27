@@ -1,7 +1,8 @@
-use std::array::from_fn;
+use crate::selection::Sel;
+use std::{array::from_fn, iter::Sum};
 
 use iced::{
-    Border, Color, Fill, Function, Subscription, Task, keyboard,
+    Function, Subscription, Task, keyboard,
     time::{self, Duration, Instant, milliseconds},
     widget::{self, container, grid, responsive},
 };
@@ -9,10 +10,9 @@ use log::info;
 
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
-    cards::card::{self, CardCanvas},
-    selection::Selection,
+    cards::card::{self, CardCanvas, CardDraw},
+    gui::Element,
 };
-use crate::{ProjCard, gui::Element};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -24,8 +24,13 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct ProjSet<Deck: Iterator<Item = ProjCard> + Default> {
-    cards: [CardCanvas<ProjCard>; 7],
+pub struct FixedSet<Deck, Card, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize>
+where
+    Deck: Iterator<Item = Card> + Default,
+    Card: CardDraw + Copy + Sum + Default + Eq,
+    Selection: Sel,
+{
+    cards: [CardCanvas<Card>; BOARD_SIZE],
     all_cards: Deck,
     selection: Selection,
     card_head: usize,
@@ -34,15 +39,21 @@ pub struct ProjSet<Deck: Iterator<Item = ProjCard> + Default> {
     current_time: Instant,
 }
 
-impl<Deck: Iterator<Item = ProjCard> + Default> ProjSet<Deck> {
+impl<Deck, Card, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize>
+    FixedSet<Deck, Card, Selection, BOARD_SIZE, DECK_SIZE>
+where
+    Deck: Iterator<Item = Card> + Default,
+    Card: CardDraw + Copy + Sum + Default + Eq,
+    Selection: Sel,
+{
     pub fn new() -> Self {
         let mut all_cards = Deck::default();
 
         Self {
             cards: from_fn(|_| CardCanvas::new(all_cards.next().unwrap())),
             all_cards,
-            selection: Selection::new(7),
-            card_head: 7,
+            selection: Selection::empty(),
+            card_head: BOARD_SIZE,
             finished: false,
             start_time: Instant::now(),
             current_time: Instant::now(),
@@ -65,61 +76,38 @@ impl<Deck: Iterator<Item = ProjCard> + Default> ProjSet<Deck> {
         Task::none()
     }
 
-    pub fn view(&self) -> Element<'_, Message> {
-        container(responsive(|size| {
-            let expected_width =
-                (size.height - GRID_SPACING) * CARD_ASPECT * 2. + 3. * GRID_SPACING;
+    pub fn view(&self, columns: usize) -> Element<'_, Message> {
+        let elapsed_time = (self.current_time - self.start_time).as_secs();
+        let seconds = elapsed_time % 60;
+        let minutes = elapsed_time / 60;
+        let bar = widget::row![
+            widget::button("Restart").on_press(Message::Restart),
+            widget::button("Menu").on_press(Message::Exit),
+            widget::text!("Remaining cards: {}", DECK_SIZE - self.card_head),
+            widget::text!("Time: {:02}:{:02}", minutes, seconds),
+        ]
+        .spacing(5.)
+        .padding(5.);
 
-            let buttons = widget::row![
-                widget::button("Restart")
-                    .on_press(Message::Restart)
-                    .width(Fill),
-                widget::button("Menu").on_press(Message::Exit).width(Fill),
-            ]
-            .spacing(5.);
-
-            let elapsed_time = (self.current_time - self.start_time).as_millis();
-            let millis = elapsed_time % 1000;
-            let seconds = (elapsed_time / 1000) % 60;
-            let minutes = elapsed_time / 60000;
-            let stats = container(
-                if self.finished {
-                    widget::column![
-                        widget::text!("Finished!"),
-                        widget::text!("Time: {:02}:{:02}:{:03}", minutes, seconds, millis),
-                    ]
-                } else {
-                    widget::column![
-                        widget::text!("Remaining cards: {}", 63 - self.card_head),
-                        widget::text!("Time: {:02}:{:02}", minutes, seconds),
-                    ]
-                }
-                .push(buttons)
-                .spacing(5.),
-            )
-            .padding(10.)
-            .style(move |_theme| container::Style {
-                background: Some(Color::WHITE.into()),
-                border: Border {
-                    color: Color::BLACK,
-                    width: 1.5,
-                    radius: 10.0.into(),
-                },
-                ..Default::default()
-            });
+        let grid = container(responsive(move |size| {
+            let rows = BOARD_SIZE.div_ceil(columns);
+            let expected_width = (size.height - (rows - 1) as f32 * GRID_SPACING) / rows as f32
+                * CARD_ASPECT
+                * columns as f32
+                + (columns - 1) as f32 * GRID_SPACING;
 
             grid(self.cards.iter().enumerate().map(|(i, card)| {
                 card.view(self.selection.is_selected(i as u8))
                     .map(Message::Card.with(i as u8))
             }))
-            .push(stats)
-            .columns(4)
+            .columns(columns)
             .spacing(GRID_SPACING)
             .width(size.width.min(expected_width))
             .height(grid::Sizing::AspectRatio(CARD_ASPECT))
         }))
-        .padding(BOARD_PADDING)
-        .into()
+        .padding(BOARD_PADDING);
+
+        widget::column![bar, grid].into()
     }
 
     fn handle_keyboard_event(&mut self, event: keyboard::Event) {
@@ -157,16 +145,17 @@ impl<Deck: Iterator<Item = ProjCard> + Default> ProjSet<Deck> {
         }
 
         info!("You got a set!");
-        if self.selection.len() + self.card_head >= 63 - 1 {
+        if self.selection.len() + self.card_head >= DECK_SIZE {
             self.finished = true;
             self.selection.clear();
             info!("You win!");
             return;
         }
         self.selection
+            .iter()
             .zip(self.all_cards.by_ref().take(self.selection.len()))
             .for_each(|(card_idx, card)| {
-                self.cards[card_idx as usize].set_card(card);
+                self.cards[card_idx].set_card(card);
                 self.card_head += 1;
             });
         self.selection.clear();
@@ -185,7 +174,13 @@ impl<Deck: Iterator<Item = ProjCard> + Default> ProjSet<Deck> {
     }
 }
 
-impl<Deck: Iterator<Item = ProjCard> + Default> Default for ProjSet<Deck> {
+impl<Deck, Card, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize> Default
+    for FixedSet<Deck, Card, Selection, BOARD_SIZE, DECK_SIZE>
+where
+    Deck: Iterator<Item = Card> + Default,
+    Card: CardDraw + Copy + Sum + Default + Eq,
+    Selection: Sel,
+{
     fn default() -> Self {
         Self::new()
     }

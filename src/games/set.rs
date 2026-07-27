@@ -8,7 +8,7 @@ use log::info;
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
     cards::card::{self, CardCanvas, check_if_has_set},
-    selection::Selection,
+    selection::{Sel, Selection},
 };
 use crate::{ClassicCard, gui::Element};
 
@@ -75,10 +75,9 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
     }
 
     pub fn view(&self) -> Element<'_, Message> {
-        let elapsed_time = (self.current_time - self.start_time).as_millis();
-        let _millis = elapsed_time % 1000;
-        let seconds = (elapsed_time / 1000) % 60;
-        let minutes = elapsed_time / 60000;
+        let elapsed_time = (self.current_time - self.start_time).as_secs();
+        let seconds = elapsed_time % 60;
+        let minutes = elapsed_time / 60;
         let bar = widget::row![
             widget::button("Restart").on_press(Message::Restart),
             widget::button("Menu").on_press(Message::Exit),
