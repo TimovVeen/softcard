@@ -1,13 +1,13 @@
 use iced::{
     Function, Subscription, Task,
     time::{self, Duration, Instant, milliseconds},
-    widget::{self, container, grid, responsive},
+    widget::{self, canvas::Cache, container, grid, responsive},
 };
 use log::info;
 
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
-    cards::card::{self, CardCanvas, check_if_has_set},
+    cards::card::{self, CardDraw, check_if_has_set},
     selection::{Sel, Selection},
 };
 use crate::{ClassicCard, gui::Element};
@@ -22,7 +22,8 @@ pub enum Message {
 }
 
 pub struct ClassicSet<Deck: Iterator<Item = ClassicCard> + Default> {
-    cards: Vec<CardCanvas<ClassicCard>>,
+    cards: Vec<ClassicCard>,
+    caches: [Cache; 21], // forgot what was the actual max
     all_cards: Deck,
     selection: Selection,
     card_head: usize,
@@ -35,21 +36,18 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
     pub fn new() -> Self {
         let mut all_cards = Deck::default();
         let mut initial_count = 12;
-        let mut cards: Vec<_> = all_cards
-            .by_ref()
-            .take(initial_count)
-            .map(CardCanvas::new)
-            .collect();
+        let mut cards: Vec<_> = all_cards.by_ref().take(initial_count).collect();
         while !check_if_has_set(&cards) {
             info!("no set");
             initial_count += 3;
-            cards.extend(all_cards.by_ref().take(3).map(CardCanvas::new));
+            cards.extend(all_cards.by_ref().take(3));
         }
 
         fastrand::shuffle(&mut cards);
 
         Self {
             cards,
+            caches: Default::default(),
             all_cards,
             selection: Selection::new(initial_count as u8),
             card_head: initial_count,
@@ -94,7 +92,7 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
                     + (columns - 1) as f32 * GRID_SPACING;
 
             grid(self.cards.iter().enumerate().map(|(i, card)| {
-                card.view(self.selection.is_selected(i as u8))
+                card.view(&self.caches[i], self.selection.is_selected(i as u8))
                     .map(Message::Card.with(i as u8))
             }))
             .columns(columns)
@@ -124,7 +122,7 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
                 self.selection
                     .zip(self.all_cards.by_ref().take(3))
                     .for_each(|(card_idx, card)| {
-                        self.cards[card_idx as usize].set_card(card);
+                        self.cards[card_idx as usize] = card;
                         self.card_head += 1;
                     });
             } else {
@@ -132,10 +130,13 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
                     self.cards.remove(card_idx as usize);
                 }
             }
+            // TODO: smarter cache clearing
+            for cache in &self.caches {
+                cache.clear();
+            }
 
             while !check_if_has_set(&self.cards) && self.card_head < 81 {
-                self.cards
-                    .extend(self.all_cards.by_ref().take(3).map(CardCanvas::new));
+                self.cards.extend(self.all_cards.by_ref().take(3));
                 self.card_head += 3;
             }
             self.selection.size = self.cards.len() as u8;

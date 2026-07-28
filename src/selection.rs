@@ -1,7 +1,5 @@
 use std::iter::Sum;
 
-use crate::cards::card::{CardCanvas, CardDraw};
-
 pub trait Sel {
     fn toggle(&mut self, index: u8);
     fn clear(&mut self);
@@ -13,11 +11,8 @@ pub trait Sel {
 
     fn iter(&self) -> impl Iterator<Item = usize>;
 
-    fn check_set<Card: CardDraw + Copy + Default + Sum + Eq>(
-        &self,
-        cards: &[CardCanvas<Card>],
-    ) -> bool {
-        self.iter().map(|i| *cards[i].get_card()).sum::<Card>() == Card::default()
+    fn check_set<Card: Copy + Default + Sum + Eq>(&self, cards: &[Card]) -> bool {
+        self.iter().map(|i| cards[i]).sum::<Card>() == Card::default()
     }
 }
 
@@ -68,14 +63,8 @@ impl Selection {
         Self { mask: 0, size }
     }
 
-    pub fn check_set<Card: CardDraw + Copy + Default + Sum + Eq>(
-        &self,
-        cards: &[CardCanvas<Card>],
-    ) -> bool {
-        self.into_iter()
-            .map(|i| *cards[i as usize].get_card())
-            .sum::<Card>()
-            == Card::default()
+    pub fn check_set<Card: Copy + Default + Sum + Eq>(&self, cards: &[Card]) -> bool {
+        self.into_iter().map(|i| cards[i as usize]).sum::<Card>() == Card::default()
     }
 }
 

@@ -4,13 +4,13 @@ use std::{array::from_fn, iter::Sum};
 use iced::{
     Function, Subscription, Task, keyboard,
     time::{self, Duration, Instant, milliseconds},
-    widget::{self, container, grid, responsive},
+    widget::{self, canvas::Cache, container, grid, responsive},
 };
 use log::info;
 
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
-    cards::card::{self, CardCanvas, CardDraw},
+    cards::card::{self, CardDraw},
     gui::Element,
 };
 
@@ -30,7 +30,8 @@ where
     Card: CardDraw + Copy + Sum + Default + Eq,
     Selection: Sel,
 {
-    cards: [CardCanvas<Card>; BOARD_SIZE],
+    cards: [Card; BOARD_SIZE],
+    caches: [Cache; BOARD_SIZE],
     all_cards: Deck,
     selection: Selection,
     card_head: usize,
@@ -50,7 +51,8 @@ where
         let mut all_cards = Deck::default();
 
         Self {
-            cards: from_fn(|_| CardCanvas::new(all_cards.next().unwrap())),
+            cards: from_fn(|_| all_cards.next().unwrap()),
+            caches: from_fn(|_| Default::default()),
             all_cards,
             selection: Selection::empty(),
             card_head: BOARD_SIZE,
@@ -89,23 +91,26 @@ where
         .spacing(5.)
         .padding(5.);
 
-        let grid = container(responsive(move |size| {
-            let rows = BOARD_SIZE.div_ceil(columns);
-            let expected_width = (size.height - (rows - 1) as f32 * GRID_SPACING) / rows as f32
-                * CARD_ASPECT
-                * columns as f32
-                + (columns - 1) as f32 * GRID_SPACING;
+        let grid =
+            container(responsive(move |size| {
+                let rows = BOARD_SIZE.div_ceil(columns);
+                let expected_width = (size.height - (rows - 1) as f32 * GRID_SPACING) / rows as f32
+                    * CARD_ASPECT
+                    * columns as f32
+                    + (columns - 1) as f32 * GRID_SPACING;
 
-            grid(self.cards.iter().enumerate().map(|(i, card)| {
-                card.view(self.selection.is_selected(i as u8))
-                    .map(Message::Card.with(i as u8))
+                grid(self.cards.iter().zip(self.caches.iter()).enumerate().map(
+                    |(i, (card, cache))| {
+                        card.view(cache, self.selection.is_selected(i as u8))
+                            .map(Message::Card.with(i as u8))
+                    },
+                ))
+                .columns(columns)
+                .spacing(GRID_SPACING)
+                .width(size.width.min(expected_width))
+                .height(grid::Sizing::AspectRatio(CARD_ASPECT))
             }))
-            .columns(columns)
-            .spacing(GRID_SPACING)
-            .width(size.width.min(expected_width))
-            .height(grid::Sizing::AspectRatio(CARD_ASPECT))
-        }))
-        .padding(BOARD_PADDING);
+            .padding(BOARD_PADDING);
 
         widget::column![bar, grid].into()
     }
@@ -155,7 +160,8 @@ where
             .iter()
             .zip(self.all_cards.by_ref().take(self.selection.len()))
             .for_each(|(card_idx, card)| {
-                self.cards[card_idx].set_card(card);
+                self.cards[card_idx] = card;
+                self.caches[card_idx].clear();
                 self.card_head += 1;
             });
         self.selection.clear();
