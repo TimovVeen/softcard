@@ -8,9 +8,9 @@ use log::info;
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
     cards::card::{self, CardDraw, check_if_has_set},
-    selection::{Sel, Selection},
+    selection::Sel,
 };
-use crate::{ClassicCard, gui::Element};
+use crate::{ClassicCard, gui::Element, selection};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -25,7 +25,7 @@ pub struct ClassicSet<Deck: Iterator<Item = ClassicCard> + Default> {
     cards: Vec<ClassicCard>,
     caches: [Cache; 21], // forgot what was the actual max
     all_cards: Deck,
-    selection: Selection,
+    selection: selection::Unordered,
     card_head: usize,
     finished: bool,
     start_time: Instant,
@@ -49,7 +49,7 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
             cards,
             caches: Default::default(),
             all_cards,
-            selection: Selection::new(initial_count as u8),
+            selection: selection::Unordered::new(initial_count as u8),
             card_head: initial_count,
             finished: false,
             start_time: Instant::now(),

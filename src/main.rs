@@ -21,7 +21,6 @@ use crate::{
         timed::{self, TimedSet},
     },
     gui::Element,
-    selection::{OrderedSelection, Selection},
     userdata::UserData,
 };
 
@@ -34,12 +33,12 @@ pub const CARD_ASPECT: f32 = 2. / 3.;
 enum State {
     #[default]
     Menu,
-    ProjSet(FixedSet<ShuffleDeck<ProjCard>, ProjCard, Selection, 7, 63>),
+    ProjSet(FixedSet<ShuffleDeck<ProjCard>, ProjCard, selection::Unordered, 7, 63>),
     ClassicSet(ClassicSet<ShuffleDeck<ClassicCard>>),
     TimedSet(TimedSet<ClassicCard, ShuffleDeck<ClassicCard>>),
     TimedProj(TimedSet<ProjCard, ShuffleDeck<ProjCard>>),
-    SymSet(FixedSet<ShuffleDeck<SymCard<4>>, SymCard<4>, OrderedSelection, 7, 23>),
-    WreathSet(FixedSet<ShuffleDeck<WreathCard<3>>, WreathCard<3>, OrderedSelection, 6, 47>),
+    SymSet(FixedSet<ShuffleDeck<SymCard<4>>, SymCard<4>, selection::Ordered, 7, 23>),
+    WreathSet(FixedSet<ShuffleDeck<WreathCard<3>>, WreathCard<3>, selection::Ordered, 6, 47>),
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]

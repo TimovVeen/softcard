@@ -16,7 +16,7 @@ use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
     cards::card::{self, CardDraw, check_if_has_set},
     gui::Element,
-    selection::{Sel, Selection},
+    selection::{self, Sel},
 };
 
 #[derive(Debug, Clone)]
@@ -35,7 +35,7 @@ pub struct TimedSet<
     cards: [Card; 12],
     caches: [Cache; 12],
     all_cards: Cycle<Deck>,
-    selection: Selection,
+    selection: selection::Unordered,
     finished: bool,
     start_time: Instant,
     remaining_time: Duration,
@@ -60,7 +60,7 @@ impl<
             cards,
             caches: Default::default(),
             all_cards,
-            selection: Selection::new(12),
+            selection: selection::Unordered::new(12),
             finished: false,
             start_time: Instant::now(),
             remaining_time: Duration::from_secs(60),

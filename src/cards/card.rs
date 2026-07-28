@@ -16,7 +16,7 @@ pub enum Message {
     Toggle,
 }
 
-pub struct CardCanvas<'a, Card: CardDraw> {
+struct CardCanvas<'a, Card: CardDraw> {
     card: Card,
     cache: &'a Cache,
 }
