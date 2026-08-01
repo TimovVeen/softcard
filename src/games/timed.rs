@@ -7,6 +7,7 @@ use std::{
 
 use iced::{
     Function, Subscription, Task,
+    keyboard::{self, key::Physical},
     time::{self, Instant, milliseconds},
     widget::{self, canvas::Cache, container, grid, responsive},
 };
@@ -15,6 +16,7 @@ use log::info;
 use crate::{
     BOARD_PADDING, CARD_ASPECT, GRID_SPACING,
     cards::card::{self, CardDraw, check_if_has_set},
+    games::set::code_to_grid,
     gui::Element,
     selection::{self, Sel},
 };
@@ -22,6 +24,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub enum Message {
     Card(u8, card::Message),
+    KeyboardEvent(keyboard::Event),
     Restart,
     Exit,
     Finished(u32),
@@ -71,6 +74,7 @@ impl<
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Card(card, card::Message::Toggle) => self.toggle_card(card),
+            Message::KeyboardEvent(event) => self.handle_keyboard_event(event),
             Message::Restart => *self = Self::new(),
             Message::Exit | Message::Finished(_) => (),
             Message::Tick(now) => {
@@ -121,6 +125,22 @@ impl<
         widget::column![bar, grid].into()
     }
 
+    fn handle_keyboard_event(&mut self, event: keyboard::Event) {
+        if let keyboard::Event::KeyPressed {
+            physical_key: Physical::Code(code),
+            repeat,
+            ..
+        } = event
+            && !repeat
+            && let Some((row, col)) = code_to_grid(code)
+            && col < 4
+            && row < 3
+        {
+            let idx = row * 4 + col;
+            self.toggle_card(idx);
+        }
+    }
+
     fn toggle_card(&mut self, card: u8) {
         if self.finished || card >= self.cards.len() as u8 {
             return;
@@ -159,10 +179,14 @@ impl<
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
+        let keyboard = keyboard::listen().map(Message::KeyboardEvent);
         if self.finished {
-            Subscription::none()
+            keyboard
         } else {
-            time::every(milliseconds(100)).map(Message::Tick)
+            Subscription::batch(vec![
+                keyboard,
+                time::every(milliseconds(100)).map(Message::Tick),
+            ])
         }
     }
 }

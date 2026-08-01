@@ -1,6 +1,6 @@
 [package]
 name = "softcard"
-version = "0.7.0"
+version = "0.7.1"
 rust-version = "1.97"
 edition = "2024"
 

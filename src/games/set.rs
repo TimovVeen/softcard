@@ -1,5 +1,6 @@
 use iced::{
     Function, Subscription, Task,
+    keyboard::{self, key::Code, key::Physical},
     time::{self, Duration, Instant, milliseconds},
     widget::{self, canvas::Cache, container, grid, responsive},
 };
@@ -15,6 +16,7 @@ use crate::{ClassicCard, gui::Element, selection};
 #[derive(Debug, Clone)]
 pub enum Message {
     Card(u8, card::Message),
+    KeyboardEvent(keyboard::Event),
     Restart,
     Exit,
     Finished(Duration),
@@ -65,6 +67,7 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
                     return Task::done(Message::Finished(self.current_time - self.start_time));
                 }
             }
+            Message::KeyboardEvent(event) => self.handle_keyboard_event(event),
             Message::Restart => *self = Self::new(),
             Message::Exit | Message::Finished(_) => (),
             Message::Tick(now) => self.current_time = now,
@@ -103,6 +106,25 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
         .padding(BOARD_PADDING);
 
         widget::column![bar, grid].into()
+    }
+
+    fn handle_keyboard_event(&mut self, event: keyboard::Event) {
+        if let keyboard::Event::KeyPressed {
+            physical_key: Physical::Code(code),
+            repeat,
+            ..
+        } = event
+            && !repeat
+        {
+            let cols = self.cards.len() as u8 / 3;
+            if let Some((row, col)) = code_to_grid(code)
+                && col < cols
+                && row < 3
+            {
+                let idx = row * cols + col;
+                self.toggle_card(idx);
+            }
+        }
     }
 
     fn toggle_card(&mut self, card: u8) {
@@ -151,10 +173,14 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
+        let keyboard = keyboard::listen().map(Message::KeyboardEvent);
         if self.finished {
-            Subscription::none()
+            keyboard
         } else {
-            time::every(milliseconds(100)).map(Message::Tick)
+            Subscription::batch(vec![
+                keyboard,
+                time::every(milliseconds(100)).map(Message::Tick),
+            ])
         }
     }
 }
@@ -162,5 +188,35 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
 impl<Deck: Iterator<Item = ClassicCard> + Default> Default for ClassicSet<Deck> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+pub fn code_to_grid(code: Code) -> Option<(u8, u8)> {
+    match code {
+        Code::KeyQ => Some((0, 0)),
+        Code::KeyW => Some((0, 1)),
+        Code::KeyE => Some((0, 2)),
+        Code::KeyR => Some((0, 3)),
+        Code::KeyT => Some((0, 4)),
+        Code::KeyY => Some((0, 5)),
+        Code::KeyU => Some((0, 6)),
+
+        Code::KeyA => Some((1, 0)),
+        Code::KeyS => Some((1, 1)),
+        Code::KeyD => Some((1, 2)),
+        Code::KeyF => Some((1, 3)),
+        Code::KeyG => Some((1, 4)),
+        Code::KeyH => Some((1, 5)),
+        Code::KeyJ => Some((1, 6)),
+
+        Code::KeyZ => Some((2, 0)),
+        Code::KeyX => Some((2, 1)),
+        Code::KeyC => Some((2, 2)),
+        Code::KeyV => Some((2, 3)),
+        Code::KeyB => Some((2, 4)),
+        Code::KeyN => Some((2, 5)),
+        Code::KeyM => Some((2, 6)),
+
+        _ => None,
     }
 }
