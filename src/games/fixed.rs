@@ -91,26 +91,29 @@ where
         .spacing(5.)
         .padding(5.);
 
-        let grid =
-            container(responsive(move |size| {
-                let rows = BOARD_SIZE.div_ceil(columns);
-                let expected_width = (size.height - (rows - 1) as f32 * GRID_SPACING) / rows as f32
-                    * CARD_ASPECT
-                    * columns as f32
-                    + (columns - 1) as f32 * GRID_SPACING;
+        let grid = container(responsive(move |size| {
+            let rows = BOARD_SIZE.div_ceil(columns);
+            let expected_width = (size.height - (rows - 1) as f32 * GRID_SPACING) / rows as f32
+                * CARD_ASPECT
+                * columns as f32
+                + (columns - 1) as f32 * GRID_SPACING;
 
-                grid(self.cards.iter().zip(self.caches.iter()).enumerate().map(
-                    |(i, (card, cache))| {
+            grid(
+                self.cards
+                    .iter()
+                    .zip(&self.caches)
+                    .enumerate()
+                    .map(|(i, (card, cache))| {
                         card.view(cache, self.selection.is_selected(i as u8))
                             .map(Message::Card.with(i as u8))
-                    },
-                ))
-                .columns(columns)
-                .spacing(GRID_SPACING)
-                .width(size.width.min(expected_width))
-                .height(grid::Sizing::AspectRatio(CARD_ASPECT))
-            }))
-            .padding(BOARD_PADDING);
+                    }),
+            )
+            .columns(columns)
+            .spacing(GRID_SPACING)
+            .width(size.width.min(expected_width))
+            .height(grid::Sizing::AspectRatio(CARD_ASPECT))
+        }))
+        .padding(BOARD_PADDING);
 
         widget::column![bar, grid].into()
     }

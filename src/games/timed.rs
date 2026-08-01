@@ -97,23 +97,26 @@ impl<
         .spacing(5.)
         .padding(5.);
 
-        let grid =
-            container(responsive(|size| {
-                let expected_width =
-                    (size.height - GRID_SPACING * 2.) / 3. * CARD_ASPECT * 4. + 3. * GRID_SPACING;
+        let grid = container(responsive(|size| {
+            let expected_width =
+                (size.height - GRID_SPACING * 2.) / 3. * CARD_ASPECT * 4. + 3. * GRID_SPACING;
 
-                grid(self.cards.iter().zip(self.caches.iter()).enumerate().map(
-                    |(i, (card, cache))| {
+            grid(
+                self.cards
+                    .iter()
+                    .zip(&self.caches)
+                    .enumerate()
+                    .map(|(i, (card, cache))| {
                         card.view(cache, self.selection.is_selected(i as u8))
                             .map(Message::Card.with(i as u8))
-                    },
-                ))
-                .columns(4)
-                .spacing(GRID_SPACING)
-                .width(size.width.min(expected_width))
-                .height(grid::Sizing::AspectRatio(CARD_ASPECT))
-            }))
-            .padding(BOARD_PADDING);
+                    }),
+            )
+            .columns(4)
+            .spacing(GRID_SPACING)
+            .width(size.width.min(expected_width))
+            .height(grid::Sizing::AspectRatio(CARD_ASPECT))
+        }))
+        .padding(BOARD_PADDING);
 
         widget::column![bar, grid].into()
     }

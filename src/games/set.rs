@@ -120,13 +120,13 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
             info!("You got a set!");
             if self.cards.len() == 12 && self.card_head < 81 {
                 self.selection
-                    .zip(self.all_cards.by_ref().take(3))
+                    .zip(self.all_cards.by_ref())
                     .for_each(|(card_idx, card)| {
                         self.cards[card_idx as usize] = card;
                         self.card_head += 1;
                     });
             } else {
-                for card_idx in self.selection.into_iter() {
+                for card_idx in self.selection {
                     self.cards.remove(card_idx as usize);
                 }
             }
