@@ -55,13 +55,13 @@ enum Screen {
 impl From<Screen> for State {
     fn from(screen: Screen) -> Self {
         match screen {
-            Screen::Menu => State::Menu,
-            Screen::ProjSet => State::ProjSet(FixedSet::default()),
-            Screen::ClassicSet => State::ClassicSet(ClassicSet::default()),
-            Screen::TimedSet => State::TimedSet(TimedSet::default()),
-            Screen::TimedProj => State::TimedProj(TimedSet::default()),
-            Screen::SymSet => State::SymSet(FixedSet::default()),
-            Screen::WreathSet => State::WreathSet(FixedSet::default()),
+            Screen::Menu => Self::Menu,
+            Screen::ProjSet => Self::ProjSet(FixedSet::default()),
+            Screen::ClassicSet => Self::ClassicSet(ClassicSet::default()),
+            Screen::TimedSet => Self::TimedSet(TimedSet::default()),
+            Screen::TimedProj => Self::TimedProj(TimedSet::default()),
+            Screen::SymSet => Self::SymSet(FixedSet::default()),
+            Screen::WreathSet => Self::WreathSet(FixedSet::default()),
         }
     }
 }
@@ -69,13 +69,13 @@ impl From<Screen> for State {
 impl From<&State> for Screen {
     fn from(state: &State) -> Self {
         match state {
-            State::Menu => Screen::Menu,
-            State::ProjSet(_) => Screen::ProjSet,
-            State::ClassicSet(_) => Screen::ClassicSet,
-            State::TimedSet(_) => Screen::TimedSet,
-            State::TimedProj(_) => Screen::TimedProj,
-            State::SymSet(_) => Screen::SymSet,
-            State::WreathSet(_) => Screen::WreathSet,
+            State::Menu => Self::Menu,
+            State::ProjSet(_) => Self::ProjSet,
+            State::ClassicSet(_) => Self::ClassicSet,
+            State::TimedSet(_) => Self::TimedSet,
+            State::TimedProj(_) => Self::TimedProj,
+            State::SymSet(_) => Self::SymSet,
+            State::WreathSet(_) => Self::WreathSet,
         }
     }
 }
@@ -165,7 +165,7 @@ impl App {
                     self.userdata
                         .best_times
                         .get(&Screen::ProjSet)
-                        .map_or("None".to_string(), |time| format!("{}s", time.as_secs()))
+                        .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
                 ))
                 .on_press(Message::ChangeScreen(Screen::ProjSet))
                 .width(Length::Fixed(160.)),
@@ -174,7 +174,7 @@ impl App {
                     self.userdata
                         .best_times
                         .get(&Screen::ClassicSet)
-                        .map_or("None".to_string(), |time| format!("{}s", time.as_secs()))
+                        .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
                 ))
                 .on_press(Message::ChangeScreen(Screen::ClassicSet))
                 .width(Length::Fixed(160.)),
@@ -183,7 +183,7 @@ impl App {
                     self.userdata
                         .best_cards
                         .get(&Screen::TimedSet)
-                        .map_or("None".to_string(), |cards| cards.to_string())
+                        .map_or_else(|| "None".to_string(), ToString::to_string)
                 ))
                 .on_press(Message::ChangeScreen(Screen::TimedSet))
                 .width(Length::Fixed(160.)),
@@ -192,7 +192,7 @@ impl App {
                     self.userdata
                         .best_cards
                         .get(&Screen::TimedProj)
-                        .map_or("None".to_string(), |cards| cards.to_string())
+                        .map_or_else(|| "None".to_string(), ToString::to_string)
                 ))
                 .on_press(Message::ChangeScreen(Screen::TimedProj))
                 .width(Length::Fixed(160.)),
@@ -201,7 +201,7 @@ impl App {
                     self.userdata
                         .best_times
                         .get(&Screen::SymSet)
-                        .map_or("None".to_string(), |time| format!("{}s", time.as_secs()))
+                        .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
                 ))
                 .on_press(Message::ChangeScreen(Screen::SymSet))
                 .width(Length::Fixed(160.)),
@@ -210,7 +210,7 @@ impl App {
                     self.userdata
                         .best_times
                         .get(&Screen::WreathSet)
-                        .map_or("None".to_string(), |time| format!("{}s", time.as_secs()))
+                        .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
                 ))
                 .on_press(Message::ChangeScreen(Screen::WreathSet))
                 .width(Length::Fixed(160.)),

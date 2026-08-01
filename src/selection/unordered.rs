@@ -1,6 +1,6 @@
 use crate::selection::Sel;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct Unordered {
     mask: u32,
     pub size: u8,
@@ -12,7 +12,7 @@ impl Sel for Unordered {
     }
 
     fn clear(&mut self) {
-        self.mask = 0
+        self.mask = 0;
     }
 
     fn is_empty(&self) -> bool {
@@ -38,7 +38,7 @@ impl Sel for Unordered {
 
     // TODO: change later
     fn iter(&self) -> impl Iterator<Item = usize> {
-        self.map(|x| x as usize)
+        self.clone().map(|x| x as usize)
     }
 }
 

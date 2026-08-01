@@ -1,4 +1,4 @@
-use std::{iter::Sum, ops::Add};
+use std::{array::from_fn, iter::Sum, ops::Add};
 
 use iced::{
     Color, Point, Renderer,
@@ -92,5 +92,12 @@ impl<const N: usize> CardGen for WreathCard<N> {
         )
         .map(|(perm, mask)| Self::new(perm, mask))
         .skip(1)
+    }
+
+    fn random() -> Self {
+        Self::new(
+            from_fn(|_| fastrand::u8(0..N as u8)),
+            from_fn(|_| fastrand::bool()),
+        )
     }
 }

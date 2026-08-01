@@ -21,7 +21,7 @@ struct CardCanvas<'a, Card: CardDraw> {
     cache: &'a Cache,
 }
 
-impl<'a, Message, Card: CardDraw> canvas::Program<Message> for CardCanvas<'a, Card> {
+impl<Message, Card: CardDraw> canvas::Program<Message> for CardCanvas<'_, Card> {
     type State = ();
 
     fn draw(
@@ -78,4 +78,5 @@ pub fn check_if_has_set<Card: Copy + Sum + Default + Eq>(cards: &[Card]) -> bool
 
 pub trait CardGen: Sized {
     fn all() -> impl Iterator<Item = Self>;
+    fn random() -> Self;
 }

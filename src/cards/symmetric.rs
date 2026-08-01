@@ -88,4 +88,8 @@ impl<const N: usize> CardGen for SymCard<N> {
             .map(|x| Self::new(x.iter().copied().collect_array().unwrap()))
             .skip(1)
     }
+
+    fn random() -> Self {
+        Self::new(from_fn(|_| fastrand::u8(0..N as u8)))
+    }
 }

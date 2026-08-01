@@ -161,17 +161,17 @@ impl<
                 .filter(|x| !self.cards.contains(x))
                 .take(3)
                 .collect();
-            self.selection.zip(new_cards).for_each(|(card_idx, card)| {
-                self.caches[card_idx as usize].clear();
-                self.cards[card_idx as usize] = card;
-            });
+            self.selection
+                .iter()
+                .zip(new_cards)
+                .for_each(|(card_idx, card)| {
+                    self.caches[card_idx].clear();
+                    self.cards[card_idx] = card;
+                });
 
             while !check_if_has_set(&self.cards) {
-                self.cards[self
-                    .selection
-                    .into_iter()
-                    .nth(fastrand::usize(0..3))
-                    .unwrap() as usize] = self.all_cards.find(|x| !self.cards.contains(x)).unwrap();
+                self.cards[self.selection.iter().nth(fastrand::usize(0..3)).unwrap() as usize] =
+                    self.all_cards.find(|x| !self.cards.contains(x)).unwrap();
             }
         }
 

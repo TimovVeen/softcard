@@ -101,4 +101,13 @@ impl CardGen for ClassicCard {
     fn all() -> impl Iterator<Item = Self> {
         iproduct!(0..3, 0..3, 0..3, 0..3).map(|idxs| ClassicCard::new(idxs.into()))
     }
+
+    fn random() -> Self {
+        Self::new([
+            fastrand::u8(0..3),
+            fastrand::u8(0..3),
+            fastrand::u8(0..3),
+            fastrand::u8(0..3),
+        ])
+    }
 }

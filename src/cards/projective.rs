@@ -64,4 +64,8 @@ impl CardGen for ProjCard {
     fn all() -> impl Iterator<Item = Self> {
         from_fn::<_, 63, _>(|i| ProjCard::new(i as u8 + 1)).into_iter()
     }
+
+    fn random() -> Self {
+        Self::new(fastrand::u8(1..0b1000000))
+    }
 }
