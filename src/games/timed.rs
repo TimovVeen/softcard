@@ -37,8 +37,10 @@ pub struct TimedSet<Card, Deck> {
     sets: u32,
 }
 
-impl<Card: CardDraw + Copy + Sum + Default + Eq + Add, Deck: Iterator<Item = Card> + Default>
-    TimedSet<Card, Deck>
+impl<Card, Deck> TimedSet<Card, Deck>
+where
+    Card: CardDraw + Copy + Sum + Default + Eq + Add,
+    Deck: Iterator<Item = Card> + Default,
 {
     pub fn new() -> Self {
         let mut all_cards = Deck::default();

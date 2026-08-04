@@ -1,3 +1,5 @@
+use std::{iter::Sum, ops::Add};
+
 use iced::{
     Function, Subscription, Task,
     keyboard::{self, key::Code, key::Physical},
@@ -11,7 +13,7 @@ use crate::{
     cards::card::{self, CardDraw, check_if_has_set},
     selection::Sel,
 };
-use crate::{ClassicCard, gui::Element, selection};
+use crate::{gui::Element, selection};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -23,8 +25,8 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct ClassicSet<Deck> {
-    cards: Vec<ClassicCard>,
+pub struct ClassicSet<Card, Deck> {
+    cards: Vec<Card>,
     caches: [Cache; 21], // forgot what was the actual max
     all_cards: Deck,
     selection: selection::Unordered,
@@ -34,7 +36,11 @@ pub struct ClassicSet<Deck> {
     current_time: Instant,
 }
 
-impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
+impl<Card, Deck> ClassicSet<Card, Deck>
+where
+    Card: CardDraw + Copy + Sum + Default + Eq + Add,
+    Deck: Iterator<Item = Card> + Default,
+{
     pub fn new() -> Self {
         let mut all_cards = Deck::default();
         let mut initial_count = 12;

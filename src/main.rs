@@ -36,12 +36,13 @@ pub const CARD_ASPECT: f32 = 2. / 3.;
 enum State {
     #[default]
     Menu,
-    ProjSet(FixedSet<ShuffleDeck<ProjCard>, ProjCard, selection::Unordered, 7, 63>),
-    ClassicSet(ClassicSet<ShuffleDeck<ClassicCard>>),
+    ProjSet(FixedSet<ProjCard, ShuffleDeck<ProjCard>, selection::Unordered, 7, 63>),
+    ClassicSet(ClassicSet<ClassicCard, ShuffleDeck<ClassicCard>>),
+    ClassicProj(ClassicSet<ProjCard, ShuffleDeck<ProjCard>>),
     TimedSet(TimedSet<ClassicCard, RandomDeck<ClassicCard>>),
     TimedProj(TimedSet<ProjCard, RandomDeck<ProjCard>>),
-    SymSet(FixedSet<ShuffleDeck<SymCard<4>>, SymCard<4>, selection::Ordered, 7, 23>),
-    WreathSet(FixedSet<ShuffleDeck<WreathCard<3>>, WreathCard<3>, selection::Ordered, 6, 47>),
+    SymSet(FixedSet<SymCard<4>, ShuffleDeck<SymCard<4>>, selection::Ordered, 7, 23>),
+    WreathSet(FixedSet<WreathCard<3>, ShuffleDeck<WreathCard<3>>, selection::Ordered, 6, 47>),
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
@@ -49,6 +50,7 @@ enum Screen {
     Menu,
     ProjSet,
     ClassicSet,
+    ClassicProj,
     TimedSet,
     TimedProj,
     SymSet,
@@ -61,6 +63,7 @@ impl From<Screen> for State {
             Screen::Menu => Self::Menu,
             Screen::ProjSet => Self::ProjSet(FixedSet::new()),
             Screen::ClassicSet => Self::ClassicSet(ClassicSet::new()),
+            Screen::ClassicProj => Self::ClassicProj(ClassicSet::new()),
             Screen::TimedSet => Self::TimedSet(TimedSet::new()),
             Screen::TimedProj => Self::TimedProj(TimedSet::new()),
             Screen::SymSet => Self::SymSet(FixedSet::new()),
@@ -75,6 +78,7 @@ impl From<&State> for Screen {
             State::Menu => Self::Menu,
             State::ProjSet(_) => Self::ProjSet,
             State::ClassicSet(_) => Self::ClassicSet,
+            State::ClassicProj(_) => Self::ClassicProj,
             State::TimedSet(_) => Self::TimedSet,
             State::TimedProj(_) => Self::TimedProj,
             State::SymSet(_) => Self::SymSet,
@@ -90,6 +94,7 @@ enum Message {
     UserDataRead(Option<UserData>),
     ProjSet(fixed::Message),
     ClassicSet(set::Message),
+    ClassicProj(set::Message),
     TimedSet(timed::Message),
     SymSet(fixed::Message),
     WreathSet(fixed::Message),
@@ -116,11 +121,13 @@ impl App {
             Message::Error(Err(e)) => error!("{e}"),
             Message::ProjSet(fixed::Message::Exit)
             | Message::ClassicSet(set::Message::Exit)
+            | Message::ClassicProj(set::Message::Exit)
             | Message::TimedSet(timed::Message::Exit)
             | Message::SymSet(fixed::Message::Exit)
             | Message::WreathSet(fixed::Message::Exit) => self.state = State::Menu,
             Message::ProjSet(fixed::Message::Finished(time))
             | Message::ClassicSet(set::Message::Finished(time))
+            | Message::ClassicProj(set::Message::Finished(time))
             | Message::SymSet(fixed::Message::Finished(time))
             | Message::WreathSet(fixed::Message::Finished(time)) => {
                 return self
@@ -141,6 +148,11 @@ impl App {
             }
             Message::ClassicSet(message) if let State::ClassicSet(classicset) = &mut self.state => {
                 return classicset.update(message).map(Message::ClassicSet);
+            }
+            Message::ClassicProj(message)
+                if let State::ClassicProj(classicproj) = &mut self.state =>
+            {
+                return classicproj.update(message).map(Message::ClassicProj);
             }
             Message::TimedSet(message) if let State::TimedSet(timedset) = &mut self.state => {
                 return timedset.update(message).map(Message::TimedSet);
@@ -164,6 +176,7 @@ impl App {
             State::Menu => self.view_menu(),
             State::ProjSet(projset) => projset.view(4).map(Message::ProjSet),
             State::ClassicSet(classicset) => classicset.view().map(Message::ClassicSet),
+            State::ClassicProj(classicproj) => classicproj.view().map(Message::ClassicProj),
             State::TimedSet(timedset) => timedset.view().map(Message::TimedSet),
             State::TimedProj(timedproj) => timedproj.view().map(Message::TimedSet),
             State::SymSet(symset) => symset.view(7).map(Message::SymSet),
@@ -176,6 +189,7 @@ impl App {
             State::Menu => Subscription::none(),
             State::ProjSet(projset) => projset.subscription().map(Message::ProjSet),
             State::ClassicSet(classicset) => classicset.subscription().map(Message::ClassicSet),
+            State::ClassicProj(classicproj) => classicproj.subscription().map(Message::ClassicProj),
             State::TimedSet(timedset) => timedset.subscription().map(Message::TimedSet),
             State::TimedProj(timedproj) => timedproj.subscription().map(Message::TimedSet),
             State::SymSet(symset) => symset.subscription().map(Message::SymSet),
@@ -203,6 +217,15 @@ impl App {
                     .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
             ))
             .on_press(Message::ChangeScreen(Screen::ClassicSet))
+            .width(Length::Fixed(160.)),
+            widget::button(widget::text!(
+                "Classic Projective\nBest time: {}",
+                self.userdata
+                    .best_times
+                    .get(&Screen::ClassicProj)
+                    .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
+            ))
+            .on_press(Message::ChangeScreen(Screen::ClassicProj))
             .width(Length::Fixed(160.)),
             widget::button(widget::text!(
                 "Timed Set\nMost cards: {}",

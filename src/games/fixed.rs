@@ -24,7 +24,7 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct FixedSet<Deck, Card, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize> {
+pub struct FixedSet<Card, Deck, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize> {
     cards: [Card; BOARD_SIZE],
     caches: [Cache; BOARD_SIZE],
     all_cards: Deck,
@@ -35,11 +35,11 @@ pub struct FixedSet<Deck, Card, Selection, const BOARD_SIZE: usize, const DECK_S
     current_time: Instant,
 }
 
-impl<Deck, Card, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize>
-    FixedSet<Deck, Card, Selection, BOARD_SIZE, DECK_SIZE>
+impl<Card, Deck, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize>
+    FixedSet<Card, Deck, Selection, BOARD_SIZE, DECK_SIZE>
 where
-    Deck: Iterator<Item = Card> + Default,
     Card: CardDraw + Copy + Sum + Default + Eq,
+    Deck: Iterator<Item = Card> + Default,
     Selection: Sel,
 {
     pub fn new() -> Self {
