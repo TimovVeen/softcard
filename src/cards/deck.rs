@@ -22,3 +22,16 @@ impl<Card: CardGen> Iterator for ShuffleDeck<Card> {
         self.deck.next()
     }
 }
+
+#[derive(Default)]
+pub struct RandomDeck<Card: CardGen> {
+    _phantom: std::marker::PhantomData<Card>,
+}
+
+impl<Card: CardGen> Iterator for RandomDeck<Card> {
+    type Item = Card;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        Some(Card::random())
+    }
+}

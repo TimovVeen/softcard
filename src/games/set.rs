@@ -23,7 +23,7 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct ClassicSet<Deck: Iterator<Item = ClassicCard> + Default> {
+pub struct ClassicSet<Deck> {
     cards: Vec<ClassicCard>,
     caches: [Cache; 21], // forgot what was the actual max
     all_cards: Deck,
@@ -183,12 +183,6 @@ impl<Deck: Iterator<Item = ClassicCard> + Default> ClassicSet<Deck> {
                 time::every(milliseconds(100)).map(Message::Tick),
             ])
         }
-    }
-}
-
-impl<Deck: Iterator<Item = ClassicCard> + Default> Default for ClassicSet<Deck> {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

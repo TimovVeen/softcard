@@ -24,12 +24,7 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct FixedSet<Deck, Card, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize>
-where
-    Deck: Iterator<Item = Card> + Default,
-    Card: CardDraw + Copy + Sum + Default + Eq,
-    Selection: Sel,
-{
+pub struct FixedSet<Deck, Card, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize> {
     cards: [Card; BOARD_SIZE],
     caches: [Cache; BOARD_SIZE],
     all_cards: Deck,
@@ -180,17 +175,5 @@ where
                 time::every(milliseconds(100)).map(Message::Tick),
             ])
         }
-    }
-}
-
-impl<Deck, Card, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize> Default
-    for FixedSet<Deck, Card, Selection, BOARD_SIZE, DECK_SIZE>
-where
-    Deck: Iterator<Item = Card> + Default,
-    Card: CardDraw + Copy + Sum + Default + Eq,
-    Selection: Sel,
-{
-    fn default() -> Self {
-        Self::new()
     }
 }

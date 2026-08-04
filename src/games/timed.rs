@@ -1,9 +1,4 @@
-use std::{
-    array::from_fn,
-    iter::{Cycle, Sum},
-    ops::Add,
-    time::Duration,
-};
+use std::{array::from_fn, iter::Sum, ops::Add, time::Duration};
 
 use iced::{
     Function, Subscription, Task,
@@ -31,13 +26,10 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct TimedSet<
-    Card: CardDraw + Copy + Sum + Default + Eq + Add,
-    Deck: Iterator<Item = Card> + Default + Clone,
-> {
+pub struct TimedSet<Card, Deck> {
     cards: [Card; 12],
     caches: [Cache; 12],
-    all_cards: Cycle<Deck>,
+    all_cards: Deck,
     selection: selection::Unordered,
     finished: bool,
     start_time: Instant,
@@ -45,13 +37,11 @@ pub struct TimedSet<
     sets: u32,
 }
 
-impl<
-    Card: CardDraw + Copy + Sum + Default + Eq + Add,
-    Deck: Iterator<Item = Card> + Default + Clone,
-> TimedSet<Card, Deck>
+impl<Card: CardDraw + Copy + Sum + Default + Eq + Add, Deck: Iterator<Item = Card> + Default>
+    TimedSet<Card, Deck>
 {
     pub fn new() -> Self {
-        let mut all_cards = Deck::default().cycle();
+        let mut all_cards = Deck::default();
         let mut cards = from_fn(|_| all_cards.next().unwrap());
         while !check_if_has_set(&cards) {
             cards[0] = all_cards.find(|x| !cards.contains(x)).unwrap();
@@ -188,15 +178,5 @@ impl<
                 time::every(milliseconds(100)).map(Message::Tick),
             ])
         }
-    }
-}
-
-impl<
-    Card: CardDraw + Copy + Sum + Default + Eq + Add,
-    Deck: Iterator<Item = Card> + Default + Clone,
-> Default for TimedSet<Card, Deck>
-{
-    fn default() -> Self {
-        Self::new()
     }
 }

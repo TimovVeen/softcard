@@ -12,7 +12,10 @@ mod selection;
 mod userdata;
 use crate::{
     cards::{
-        deck::ShuffleDeck, projective::ProjCard, set::ClassicCard, symmetric::SymCard,
+        deck::{RandomDeck, ShuffleDeck},
+        projective::ProjCard,
+        set::ClassicCard,
+        symmetric::SymCard,
         wreath::WreathCard,
     },
     games::{
@@ -35,8 +38,8 @@ enum State {
     Menu,
     ProjSet(FixedSet<ShuffleDeck<ProjCard>, ProjCard, selection::Unordered, 7, 63>),
     ClassicSet(ClassicSet<ShuffleDeck<ClassicCard>>),
-    TimedSet(TimedSet<ClassicCard, ShuffleDeck<ClassicCard>>),
-    TimedProj(TimedSet<ProjCard, ShuffleDeck<ProjCard>>),
+    TimedSet(TimedSet<ClassicCard, RandomDeck<ClassicCard>>),
+    TimedProj(TimedSet<ProjCard, RandomDeck<ProjCard>>),
     SymSet(FixedSet<ShuffleDeck<SymCard<4>>, SymCard<4>, selection::Ordered, 7, 23>),
     WreathSet(FixedSet<ShuffleDeck<WreathCard<3>>, WreathCard<3>, selection::Ordered, 6, 47>),
 }
@@ -56,12 +59,12 @@ impl From<Screen> for State {
     fn from(screen: Screen) -> Self {
         match screen {
             Screen::Menu => Self::Menu,
-            Screen::ProjSet => Self::ProjSet(FixedSet::default()),
-            Screen::ClassicSet => Self::ClassicSet(ClassicSet::default()),
-            Screen::TimedSet => Self::TimedSet(TimedSet::default()),
-            Screen::TimedProj => Self::TimedProj(TimedSet::default()),
-            Screen::SymSet => Self::SymSet(FixedSet::default()),
-            Screen::WreathSet => Self::WreathSet(FixedSet::default()),
+            Screen::ProjSet => Self::ProjSet(FixedSet::new()),
+            Screen::ClassicSet => Self::ClassicSet(ClassicSet::new()),
+            Screen::TimedSet => Self::TimedSet(TimedSet::new()),
+            Screen::TimedProj => Self::TimedProj(TimedSet::new()),
+            Screen::SymSet => Self::SymSet(FixedSet::new()),
+            Screen::WreathSet => Self::WreathSet(FixedSet::new()),
         }
     }
 }
@@ -158,66 +161,7 @@ impl App {
 
     fn view(&self) -> Element<'_, Message> {
         match &self.state {
-            State::Menu => widget::column![
-                widget::text!["Select Game:"],
-                widget::button(widget::text!(
-                    "Projective Set\nBest time: {}",
-                    self.userdata
-                        .best_times
-                        .get(&Screen::ProjSet)
-                        .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
-                ))
-                .on_press(Message::ChangeScreen(Screen::ProjSet))
-                .width(Length::Fixed(160.)),
-                widget::button(widget::text!(
-                    "Classic Set\nBest time: {}",
-                    self.userdata
-                        .best_times
-                        .get(&Screen::ClassicSet)
-                        .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
-                ))
-                .on_press(Message::ChangeScreen(Screen::ClassicSet))
-                .width(Length::Fixed(160.)),
-                widget::button(widget::text!(
-                    "Timed Set\nMost cards: {}",
-                    self.userdata
-                        .best_cards
-                        .get(&Screen::TimedSet)
-                        .map_or_else(|| "None".to_string(), ToString::to_string)
-                ))
-                .on_press(Message::ChangeScreen(Screen::TimedSet))
-                .width(Length::Fixed(160.)),
-                widget::button(widget::text!(
-                    "Timed Projective\nMost cards: {}",
-                    self.userdata
-                        .best_cards
-                        .get(&Screen::TimedProj)
-                        .map_or_else(|| "None".to_string(), ToString::to_string)
-                ))
-                .on_press(Message::ChangeScreen(Screen::TimedProj))
-                .width(Length::Fixed(160.)),
-                widget::button(widget::text!(
-                    "Permutation Set\nBest time: {}",
-                    self.userdata
-                        .best_times
-                        .get(&Screen::SymSet)
-                        .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
-                ))
-                .on_press(Message::ChangeScreen(Screen::SymSet))
-                .width(Length::Fixed(160.)),
-                widget::button(widget::text!(
-                    "Wreath Set\nBest time: {}",
-                    self.userdata
-                        .best_times
-                        .get(&Screen::WreathSet)
-                        .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
-                ))
-                .on_press(Message::ChangeScreen(Screen::WreathSet))
-                .width(Length::Fixed(160.)),
-            ]
-            .spacing(5.)
-            .padding(20.)
-            .into(),
+            State::Menu => self.view_menu(),
             State::ProjSet(projset) => projset.view(4).map(Message::ProjSet),
             State::ClassicSet(classicset) => classicset.view().map(Message::ClassicSet),
             State::TimedSet(timedset) => timedset.view().map(Message::TimedSet),
@@ -237,6 +181,69 @@ impl App {
             State::SymSet(symset) => symset.subscription().map(Message::SymSet),
             State::WreathSet(wreathset) => wreathset.subscription().map(Message::WreathSet),
         }
+    }
+
+    fn view_menu(&self) -> Element<'_, Message> {
+        widget::column![
+            widget::text!["Select Game:"],
+            widget::button(widget::text!(
+                "Projective Set\nBest time: {}",
+                self.userdata
+                    .best_times
+                    .get(&Screen::ProjSet)
+                    .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
+            ))
+            .on_press(Message::ChangeScreen(Screen::ProjSet))
+            .width(Length::Fixed(160.)),
+            widget::button(widget::text!(
+                "Classic Set\nBest time: {}",
+                self.userdata
+                    .best_times
+                    .get(&Screen::ClassicSet)
+                    .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
+            ))
+            .on_press(Message::ChangeScreen(Screen::ClassicSet))
+            .width(Length::Fixed(160.)),
+            widget::button(widget::text!(
+                "Timed Set\nMost cards: {}",
+                self.userdata
+                    .best_cards
+                    .get(&Screen::TimedSet)
+                    .map_or_else(|| "None".to_string(), ToString::to_string)
+            ))
+            .on_press(Message::ChangeScreen(Screen::TimedSet))
+            .width(Length::Fixed(160.)),
+            widget::button(widget::text!(
+                "Timed Projective\nMost cards: {}",
+                self.userdata
+                    .best_cards
+                    .get(&Screen::TimedProj)
+                    .map_or_else(|| "None".to_string(), ToString::to_string)
+            ))
+            .on_press(Message::ChangeScreen(Screen::TimedProj))
+            .width(Length::Fixed(160.)),
+            widget::button(widget::text!(
+                "Permutation Set\nBest time: {}",
+                self.userdata
+                    .best_times
+                    .get(&Screen::SymSet)
+                    .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
+            ))
+            .on_press(Message::ChangeScreen(Screen::SymSet))
+            .width(Length::Fixed(160.)),
+            widget::button(widget::text!(
+                "Wreath Set\nBest time: {}",
+                self.userdata
+                    .best_times
+                    .get(&Screen::WreathSet)
+                    .map_or_else(|| "None".to_string(), |time| format!("{}s", time.as_secs()))
+            ))
+            .on_press(Message::ChangeScreen(Screen::WreathSet))
+            .width(Length::Fixed(160.)),
+        ]
+        .spacing(5.)
+        .padding(20.)
+        .into()
     }
 }
 
