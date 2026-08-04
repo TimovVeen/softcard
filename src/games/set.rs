@@ -25,8 +25,8 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct ClassicSet<Card, Deck> {
-    cards: Vec<Card>,
+pub struct ClassicSet<Deck: Iterator> {
+    cards: Vec<Deck::Item>,
     caches: [Cache; 21], // forgot what was the actual max
     all_cards: Deck,
     selection: selection::Unordered,
@@ -36,7 +36,7 @@ pub struct ClassicSet<Card, Deck> {
     current_time: Instant,
 }
 
-impl<Card, Deck> ClassicSet<Card, Deck>
+impl<Card, Deck> ClassicSet<Deck>
 where
     Card: CardDraw + Copy + Sum + Default + Eq + Add,
     Deck: Iterator<Item = Card> + Default,
@@ -81,7 +81,10 @@ where
         Task::none()
     }
 
-    pub fn view(&self) -> Element<'_, Message> {
+    pub fn view<'a>(&'a self) -> Element<'a, Message>
+    where
+        Card: 'a,
+    {
         let elapsed_time = (self.current_time - self.start_time).as_secs();
         let seconds = elapsed_time % 60;
         let minutes = elapsed_time / 60;

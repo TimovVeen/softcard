@@ -26,8 +26,8 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct TimedSet<Card, Deck> {
-    cards: [Card; 12],
+pub struct TimedSet<Deck: Iterator> {
+    cards: [Deck::Item; 12],
     caches: [Cache; 12],
     all_cards: Deck,
     selection: selection::Unordered,
@@ -37,7 +37,7 @@ pub struct TimedSet<Card, Deck> {
     sets: u32,
 }
 
-impl<Card, Deck> TimedSet<Card, Deck>
+impl<Card, Deck> TimedSet<Deck>
 where
     Card: CardDraw + Copy + Sum + Default + Eq + Add,
     Deck: Iterator<Item = Card> + Default,
@@ -83,7 +83,10 @@ where
         Task::none()
     }
 
-    pub fn view(&self) -> Element<'_, Message> {
+    pub fn view<'a>(&'a self) -> Element<'a, Message>
+    where
+        Card: 'a,
+    {
         let bar = widget::row![
             widget::button("Restart").on_press(Message::Restart),
             widget::button("Menu").on_press(Message::Exit),

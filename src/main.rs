@@ -29,13 +29,13 @@ pub const CARD_ASPECT: f32 = 2. / 3.;
 enum State {
     #[default]
     Menu,
-    ProjSet(FixedSet<ProjCard, ShuffleDeck<ProjCard>, selection::Unordered, 7, 63>),
-    ClassicSet(ClassicSet<ClassicCard, ShuffleDeck<ClassicCard>>),
-    ClassicProj(ClassicSet<ProjCard, ShuffleDeck<ProjCard>>),
-    TimedSet(TimedSet<ClassicCard, RandomDeck<ClassicCard>>),
-    TimedProj(TimedSet<ProjCard, RandomDeck<ProjCard>>),
-    SymSet(FixedSet<SymCard<4>, ShuffleDeck<SymCard<4>>, selection::Ordered, 7, 23>),
-    WreathSet(FixedSet<WreathCard<3>, ShuffleDeck<WreathCard<3>>, selection::Ordered, 6, 47>),
+    ProjSet(FixedSet<ShuffleDeck<ProjCard>, selection::Unordered, 7, 63>),
+    ClassicSet(ClassicSet<ShuffleDeck<ClassicCard>>),
+    ClassicProj(ClassicSet<ShuffleDeck<ProjCard>>),
+    TimedSet(TimedSet<RandomDeck<ClassicCard>>),
+    TimedProj(TimedSet<RandomDeck<ProjCard>>),
+    SymSet(FixedSet<ShuffleDeck<SymCard<4>>, selection::Ordered, 7, 23>),
+    WreathSet(FixedSet<ShuffleDeck<WreathCard<3>>, selection::Ordered, 6, 47>),
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]

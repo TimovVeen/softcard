@@ -24,8 +24,8 @@ pub enum Message {
     Tick(Instant),
 }
 
-pub struct FixedSet<Card, Deck, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize> {
-    cards: [Card; BOARD_SIZE],
+pub struct FixedSet<Deck: Iterator, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize> {
+    cards: [Deck::Item; BOARD_SIZE],
     caches: [Cache; BOARD_SIZE],
     all_cards: Deck,
     selection: Selection,
@@ -36,7 +36,7 @@ pub struct FixedSet<Card, Deck, Selection, const BOARD_SIZE: usize, const DECK_S
 }
 
 impl<Card, Deck, Selection, const BOARD_SIZE: usize, const DECK_SIZE: usize>
-    FixedSet<Card, Deck, Selection, BOARD_SIZE, DECK_SIZE>
+    FixedSet<Deck, Selection, BOARD_SIZE, DECK_SIZE>
 where
     Card: CardDraw + Copy + Sum + Default + Eq,
     Deck: Iterator<Item = Card> + Default,
@@ -73,7 +73,10 @@ where
         Task::none()
     }
 
-    pub fn view(&self, columns: usize) -> Element<'_, Message> {
+    pub fn view<'a>(&'a self, columns: usize) -> Element<'a, Message>
+    where
+        Card: 'a,
+    {
         let elapsed_time = (self.current_time - self.start_time).as_secs();
         let seconds = elapsed_time % 60;
         let minutes = elapsed_time / 60;
