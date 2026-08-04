@@ -1,23 +1,16 @@
-use iced::{
-    Length, Subscription, Task,
-    widget::{self},
-};
+use iced::{Length, Subscription, Task, widget};
 use log::error;
 use serde::{Deserialize, Serialize};
 
 mod cards;
+mod decks;
 mod games;
 mod gui;
 mod selection;
 mod userdata;
 use crate::{
-    cards::{
-        deck::{RandomDeck, ShuffleDeck},
-        projective::ProjCard,
-        set::ClassicCard,
-        symmetric::SymCard,
-        wreath::WreathCard,
-    },
+    cards::{projective::ProjCard, set::ClassicCard, symmetric::SymCard, wreath::WreathCard},
+    decks::{RandomDeck, ShuffleDeck},
     games::{
         fixed::{self, FixedSet},
         set::{self, ClassicSet},
